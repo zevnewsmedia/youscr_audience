@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Matches</title>
+</head>
+<body>
+
+<h1>Matches</h1>
+
+<% if (error) { %>
+  <p style="color:red;"><%= error %></p>
+<% } %>
+
+<% if (Object.keys(groupedByEvent).length === 0) { %>
+  <p>No matches available.</p>
+<% } else { %>
+
+  <% Object.keys(groupedByEvent).forEach(eventId => {
+      const group = groupedByEvent[eventId];
+  %>
+
+    <h2><%= group.event_name %></h2>
+    <% if (group.event_date) { %>
+      <p><%= new Date(group.event_date).toLocaleDateString() %></p>
+    <% } %>
+
+    <table border="1" cellpadding="8">
+      <thead>
+        <tr>
+          <th>Round</th>
+          <th>Heat</th>
+          <th>Hotseat</th>
+          <th>Challenger</th>
+          <th>Winner</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% group.matches.forEach(match => { %>
+        <tr>
+          <td><%= match.round %></td>
+          <td><%= match.hotseat.heat %></td>
+          <td><%= match.hotseat.overtaker %> → <%= match.hotseat.overtaken %></td>
+          <td><%= match.challenger.overtaker %> → <%= match.challenger.overtaken %></td>
+          <td>
+            <% if (!match.finalized) { %>
+              —
+            <% } else if (match.winner === "tie") { %>
+              Tie
+            <% } else if (match.winner === "hotseat") { %>
+              <%= match.hotseat.overtaker %> → <%= match.hotseat.overtaken %>
+            <% } else if (match.winner === "challenger") { %>
+              <%= match.challenger.overtaker %> → <%= match.challenger.overtaken %>
+            <% } else { %>
+              —
+            <% } %>
+          </td>
+          <td><%= match.finalized ? "Finalized" : "Active" %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+    <br>
+
+  <% }); %>
+
+<% } %>
+
+</body>
+</html>

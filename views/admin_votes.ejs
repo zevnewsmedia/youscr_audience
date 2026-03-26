@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Admin – Votes</title>
+</head>
+<body>
+
+<h1>🗳️ Match Votes (Admin)</h1>
+
+<% if (error) { %>
+  <p style="color:red;"><%= error %></p>
+<% } %>
+
+<% if (!matches || matches.length === 0) { %>
+  <p>No votes found.</p>
+<% } else { %>
+
+  <% matches.forEach(m => { %>
+    <hr>
+
+    <h2>Match <%= m.match_id %></h2>
+    <% if (m.round) { %>
+      <p><strong>Round:</strong> <%= m.round %></p>
+    <% } %>
+
+    <h3>🔥 Hotseat</h3>
+    <p>
+      <%= m.hotseat.overtaker.name %> <%= m.hotseat.overtaker.surname %>
+      →
+      <%= m.hotseat.overtaken.name %> <%= m.hotseat.overtaken.surname %><br>
+      <em><%= m.hotseat.description %></em><br>
+      <strong>Votes:</strong> <%= m.hotseatVotes %>
+    </p>
+
+    <h3>⚔️ Challenger</h3>
+    <p>
+      <%= m.challenger.overtaker.name %> <%= m.challenger.overtaker.surname %>
+      →
+      <%= m.challenger.overtaken.name %> <%= m.challenger.overtaken.surname %><br>
+      <em><%= m.challenger.description %></em><br>
+      <strong>Votes:</strong> <%= m.challengerVotes %>
+    </p>
+
+    <p><strong>Total votes:</strong> <%= m.totalVotes %></p>
+
+    <details>
+      <summary>👤 Voters</summary>
+      <ul>
+        <% m.voters.forEach(v => { %>
+          <li>
+            IP: <%= v.ip %> |
+            Overtake ID: <%= v.voted_overtake_id %> |
+            <%= new Date(v.created_at).toLocaleString() %>
+          </li>
+        <% }) %>
+      </ul>
+    </details>
+
+  <% }) %>
+
+<% } %>
+
+</body>
+</html>
+

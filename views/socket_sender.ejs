@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket Sender</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 50px;
+      text-align: center;
+    }
+    button {
+      padding: 20px 40px;
+      font-size: 20px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🚀 Socket Sender</h1>
+  <button onclick="sendValue('Button clicked!')">Send Message</button>
+  <div id="status"></div>
+
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const status = document.getElementById('status');
+
+    function sendValue(value) {
+      socket.emit('send_value', { value: value });
+      status.innerHTML = `✅ Sent: ${value}`;
+      console.log('📤 Sent:', value);
+    }
+
+    socket.on('connect', () => {
+      status.innerHTML = '🟢 Connected';
+      console.log('✅ Connected:', socket.id);
+    });
+
+    socket.on('disconnect', () => {
+      status.innerHTML = '🔴 Disconnected';
+    });
+  </script>
+
+</body>
+</html>

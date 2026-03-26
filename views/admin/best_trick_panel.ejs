@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>YouSCR Control | Best Trick</title>
+</head>
+<body>
+<h1>Best Trick Control</h1>
+<%- include("../partials/admin_menu") %>
+<div class="event-switcher">
+<form method="GET" action="/admin/best-trick" id="filterForm">
+<div>
+<label>1. Select Active Event:</label>
+<select name="event_id" onchange="this.form.submit()">
+<option value="">-- Choose an Event --</option>
+<% events.forEach(event => { %>
+<option value="<%= event._id %>" <%= event_id == event._id ? 'selected' : '' %>>
+<%= event.name %>
+</option>
+<% }) %>
+</select>
+</div>
+<div>
+<label>2. Active Heat:</label>
+<input type="number" name="heat" value="<%= current_heat || 1 %>" onchange="this.form.submit()">
+</div>
+</form>
+</div>
+<% if (!event_id) { %>
+<p>Please select an event above to start managing tricks.</p>
+<% } else { %>
+<fieldset>
+<legend>🏆 Hot Seat — Current Leader (Heat <%= current_heat || 1 %>)</legend>
+<% if (hotSeat) { %>
+<p><strong>Rider:</strong> <%= hotSeat.rider %></p>
+<p><strong>Trick:</strong> <%= hotSeat.trick %></p>
+<p><strong>Votes:</strong> <%= hotSeat.voteCount %></p>
+<% } else { %>
+<p><em>No votes recorded yet for this heat.</em></p>
+<% } %>
+</fieldset>
+<br>
+<fieldset>
+<legend>1. Register Landing (Heat <%= current_heat || 1 %>)</legend>
+<form action="/admin/register-performance" method="POST">
+<input type="hidden" name="event_id" value="<%= event_id %>">
+<input type="hidden" name="heat" value="<%= current_heat || 1 %>">
+<label>Rider:</label>
+<select name="rider_id" required>
+<option value="">-- Select Rider --</option>
+<% riders.forEach(r => { %>
+<option value="<%= r._id %>"><%= r.name %> <%= r.surname %></option>
+<% }) %>
+</select>
+<label>Trick:</label>
+<select name="trick_id" required>
+<option value="">-- Select Trick --</option>
+<% library.forEach(t => { %>
+<option value="<%= t._id %>"><%= t.trick_name %></option>
+<% }) %>
+</select>
+<button type="submit">Save Landing to Heat <%= current_heat || 1 %></button>
+</form>
+</fieldset>
+<br>
+<fieldset>
+<legend>2. Broadcast Duel to Fans</legend>
+<form action="/admin/broadcast-duel" method="POST">
+<input type="hidden" name="event_id" value="<%= event_id %>">
+<input type="hidden" name="heat" value="<%= current_heat || 1 %>">
+<p><small>Showing all recorded landings for this event. Select two to compare.</small></p>
+<label>Option A:</label>
+<select name="trick_a_id" required size="6">
+<% eventTricks.forEach(et => { %>
+<option value="<%= et._id %>"><%= et.display %></option>
+<% }) %>
+</select>
+<div>VS</div>
+<label>Option B:</label>
+<select name="trick_b_id" required size="6">
+<% eventTricks.forEach(et => { %>
+<option value="<%= et._id %>"><%= et.display %></option>
+<% }) %>
+</select>
+<br>
+<button type="submit">SEND DUEL TO FANS</button>
+</form>
+</fieldset>
+<p>
+<strong>Live View:</strong> 
+<a href="/results/best-trick?event_id=<%= event_id %>&heat=<%= current_heat || 1 %>" target="_blank">
+View Results for Heat <%= current_heat || 1 %> →
+</a>
+</p>
+<% } %>
+</body>
+</html>

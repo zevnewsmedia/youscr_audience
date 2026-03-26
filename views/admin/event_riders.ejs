@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Event Riders</title>
+</head>
+<body>
+
+  <%- include("../partials/admin_menu") %>
+
+  <h1>Event Riders</h1>
+
+  <label>Event:</label><br>
+  <select id="event_select">
+    <option value="">-- Select Event --</option>
+    <% events.forEach(e => { %>
+      <option value="<%= e._id %>"><%= e.name %></option>
+    <% }) %>
+  </select>
+
+  <hr>
+
+  <!-- ── ADD RIDER ── -->
+  <div id="add_section" style="display:none">
+
+    <h3>Add Rider</h3>
+
+    <label>Search:</label><br>
+    <input type="text" id="rider_search" placeholder="Type name..."><br><br>
+
+    <label>Or select from list:</label><br>
+    <select id="rider_select">
+      <option value="">-- Select Rider --</option>
+      <% riders.forEach(r => { %>
+        <option value="<%= r._id %>"><%= r.name %> <%= r.surname %></option>
+      <% }) %>
+    </select><br><br>
+
+    <p id="selected_rider_name">No rider selected</p>
+    <input type="hidden" id="selected_rider_id">
+
+    <label>Class:</label><br>
+    <select id="class_select">
+      <option value="">-- Select Class --</option>
+      <% classes.forEach(c => { %>
+        <option value="<%= c._id %>"><%= c.name %></option>
+      <% }) %>
+    </select><br><br>
+
+    <button id="add_btn">Add Rider</button>
+    <p id="add_error" style="color:red;display:none"></p>
+
+  </div>
+
+  <hr>
+
+  <!-- ── ENROLLED RIDERS ── -->
+  <div id="enrolled_section" style="display:none">
+
+    <h3>Enrolled Riders</h3>
+
+    <label>Search:</label>
+    <input type="text" id="enrolled_search" placeholder="Type name...">
+    &nbsp;
+    <label>Or select:</label>
+    <select id="enrolled_rider_filter">
+      <option value="">All riders</option>
+    </select>
+    &nbsp;
+    <label>Class:</label>
+    <select id="enrolled_class_filter">
+      <option value="">All classes</option>
+      <% classes.forEach(c => { %>
+        <option value="<%= c._id %>"><%= c.name %></option>
+      <% }) %>
+    </select>
+    <br><br>
+
+    <p id="enrolled_count"></p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Class</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="enrolled_body"></tbody>
+    </table>
+
+  </div>
+
+  <script>
+    const allRiders = <%- JSON.stringify(riders) %>;
+
+    const eventSelect          = document.getElementById('event_select');
+    const addSection           = document.getElementById('add_section');
+    const enrolledSection      = document.getElementById('enrolled_section');
+    const riderSearch          = document.getElementById('rider_search');
+    const riderSelect          = document.getElementById('rider_select');
+    const selectedRiderId      = document.getElementById('selected_rider_id');
+    const selectedRiderName    = document.getElementById('selected_rider_name');
+    const classSelect          = document.getElementById('class_select');
+    const addBtn               = document.getElementById('add_btn');
+    const addError             = document.getElementById('add_error');
+    const enrolledSearch       = document.getElementById('enrolled_search');
+    const enrolledRiderFilter  = document.getElementById('enrolled_rider_filter');
+    const enrolledClassFilter  = document.getElementById('enrolled_class_filter');
+    const enrolledBody         = document.getElementById('enrolled_body');
+    const enrolledCount        = document.getElementById('enrolled_count');
+
+    let enrolledRiders = [];
+
+    // ── Event change ──
+    eventSelect.addEventListener('change', async function () {
+      const eventId = this.value;
+
+      addSection.style.display      = eventId ? 'block' : 'none';
+      enrolledSection.style.display = eventId ? 'block' : 'none';
+
+      // reset add form
+      riderSearch.value             = '';
+      riderSelect.value             = '';
+      selectedRiderId.value         = '';
+      selectedRiderName.textContent = 'No rider selected';
+      classSelect.value             = '';
+      addError.style.display        = 'none';
+
+      if (!eventId) return;
+      await loadEnrolled(eventId);
+    });
+
+    // ── Load enrolled ──
+    async function loadEnrolled(eventId) {
+      try {
+        const res      = await fetch(`/admin/event-riders/${eventId}/list`);
+        enrolledRiders = await res.json();
+        rebuildEnrolledFilter();
+        renderEnrolled();
+      } catch (err) {
+        console.error('Error loading enrolled riders:', err);
+      }
+    }
+
+    // ── Rebuild the enrolled rider select filter ──
+    function rebuildEnrolledFilter() {
+      enrolledRiderFilter.innerHTML = '<option value="">All riders</option>';
+      enrolledRiders.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value       = r.rider_id;
+        opt.textContent = `${r.name} ${r.surname}`;
+        enrolledRiderFilter.appendChild(opt);
+      });
+    }
+
+    // ── Render enrolled table ──
+    function renderEnrolled() {
+      const searchVal  = enrolledSearch.value.toLowerCase();
+      const riderVal   = enrolledRiderFilter.value;
+      const classVal   = enrolledClassFilter.value;
+
+      const filtered = enrolledRiders.filter(r => {
+        const fullName   = `${r.name} ${r.surname}`.toLowerCase();
+        const matchName  = !searchVal || fullName.includes(searchVal);
+        const matchRider = !riderVal  || r.rider_id.toString() === riderVal;
+        const matchClass = !classVal  || r.class_id === classVal;
+        return matchName && matchRider && matchClass;
+      });
+
+      enrolledBody.innerHTML = '';
+
+      filtered.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.name} ${r.surname}</td>
+          <td>${r.class_name}</td>
+          <td><button class="remove-btn">Remove</button></td>
+        `;
+
+        tr.querySelector('.remove-btn').onclick = async () => {
+          if (!confirm(`Remove ${r.name} ${r.surname} from this event?`)) return;
+          try {
+            await fetch(`/admin/event-riders/${eventSelect.value}/remove/${r.enrollment_id}`, { method: 'POST' });
+            enrolledRiders = enrolledRiders.filter(e => e.enrollment_id.toString() !== r.enrollment_id.toString());
+            rebuildEnrolledFilter();
+            renderEnrolled();
+          } catch (err) {
+            console.error('Error removing rider:', err);
+          }
+        };
+
+        enrolledBody.appendChild(tr);
+      });
+
+      enrolledCount.textContent = `Showing ${filtered.length} of ${enrolledRiders.length} riders`;
+    }
+
+    // ── Enrolled filters ──
+    enrolledSearch.addEventListener('input', renderEnrolled);
+    enrolledRiderFilter.addEventListener('change', renderEnrolled);
+    enrolledClassFilter.addEventListener('change', renderEnrolled);
+
+    // ── Add: rider search input filters the select ──
+    riderSearch.addEventListener('input', function () {
+      const query = this.value.toLowerCase().trim();
+
+      riderSelect.innerHTML = '<option value="">-- Select Rider --</option>';
+
+      const pool = query
+        ? allRiders.filter(r => `${r.name} ${r.surname}`.toLowerCase().includes(query))
+        : allRiders;
+
+      pool.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value       = r._id;
+        opt.textContent = `${r.name} ${r.surname}`;
+        riderSelect.appendChild(opt);
+      });
+
+      // clear selection if search changes
+      selectedRiderId.value         = '';
+      selectedRiderName.textContent = 'No rider selected';
+      riderSelect.value             = '';
+    });
+
+    // ── Add: selecting from dropdown sets the hidden input ──
+    riderSelect.addEventListener('change', function () {
+      const riderId = this.value;
+      if (!riderId) {
+        selectedRiderId.value         = '';
+        selectedRiderName.textContent = 'No rider selected';
+        return;
+      }
+      const rider = allRiders.find(r => r._id === riderId);
+      selectedRiderId.value         = riderId;
+      selectedRiderName.textContent = rider
+        ? `Selected: ${rider.name} ${rider.surname}`
+        : 'Selected';
+    });
+
+    // ── Add rider ──
+    addBtn.addEventListener('click', async () => {
+      const eventId = eventSelect.value;
+      const riderId = selectedRiderId.value;
+      const classId = classSelect.value;
+
+      addError.style.display = 'none';
+
+      if (!riderId) {
+        addError.textContent   = 'Please select a rider';
+        addError.style.display = 'block';
+        return;
+      }
+      if (!classId) {
+        addError.textContent   = 'Please select a class';
+        addError.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res  = await fetch(`/admin/event-riders/${eventId}/add`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ rider_id: riderId, class_id: classId })
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          addError.textContent   = data.error || 'Error adding rider';
+          addError.style.display = 'block';
+          return;
+        }
+
+        // reset
+        riderSearch.value             = '';
+        riderSelect.value             = '';
+        selectedRiderId.value         = '';
+        selectedRiderName.textContent = 'No rider selected';
+        classSelect.value             = '';
+
+        await loadEnrolled(eventId);
+
+      } catch (err) {
+        console.error('Error adding rider:', err);
+        addError.textContent   = 'Server error';
+        addError.style.display = 'block';
+      }
+    });
+  </script>
+
+</body>
+</html>

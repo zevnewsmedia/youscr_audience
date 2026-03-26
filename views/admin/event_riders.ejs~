@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Event Riders</title>
+</head>
+<body>
+
+  <%- include("../partials/admin_menu") %>
+
+  <h1>Event Riders</h1>
+
+  <label>Event:</label><br>
+  <select id="event_select">
+    <option value="">-- Select Event --</option>
+    <% events.forEach(e => { %>
+      <option value="<%= e._id %>"><%= e.name %></option>
+    <% }) %>
+  </select>
+
+  <hr>
+
+  <!-- ── ADD RIDER ── -->
+  <div id="add_section" style="display:none">
+
+    <h3>Add Rider</h3>
+
+    <label>Search:</label><br>
+    <input type="text" id="rider_search" placeholder="Type name..."><br><br>
+
+    <div id="rider_results"></div>
+
+    <input type="hidden" id="selected_rider_id">
+    <p id="selected_rider_name">No rider selected</p>
+
+    <label>Class:</label><br>
+    <select id="class_select">
+      <option value="">-- Select Class --</option>
+      <% classes.forEach(c => { %>
+        <option value="<%= c._id %>"><%= c.name %></option>
+      <% }) %>
+    </select><br><br>
+
+    <button id="add_btn">Add Rider</button>
+    <p id="add_error" style="color:red;display:none"></p>
+
+  </div>
+
+  <hr>
+
+  <!-- ── ENROLLED RIDERS ── -->
+  <div id="enrolled_section" style="display:none">
+
+    <h3>Enrolled Riders</h3>
+
+    <label>Search:</label>
+    <input type="text" id="enrolled_search" placeholder="Type name...">
+    &nbsp;
+    <label>Class:</label>
+    <select id="enrolled_class_filter">
+      <option value="">All classes</option>
+      <% classes.forEach(c => { %>
+        <option value="<%= c._id %>"><%= c.name %></option>
+      <% }) %>
+    </select>
+    <br><br>
+
+    <p id="enrolled_count"></p>
+
+    <table id="enrolled_table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Class</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="enrolled_body"></tbody>
+    </table>
+
+  </div>
+
+  <script>
+    // ── Master riders list from EJS ──
+    const allRiders = <%- JSON.stringify(riders) %>;
+
+    const eventSelect         = document.getElementById('event_select');
+    const addSection          = document.getElementById('add_section');
+    const enrolledSection     = document.getElementById('enrolled_section');
+    const riderSearch         = document.getElementById('rider_search');
+    const riderResults        = document.getElementById('rider_results');
+    const selectedRiderId     = document.getElementById('selected_rider_id');
+    const selectedRiderName   = document.getElementById('selected_rider_name');
+    const classSelect         = document.getElementById('class_select');
+    const addBtn              = document.getElementById('add_btn');
+    const addError            = document.getElementById('add_error');
+    const enrolledSearch      = document.getElementById('enrolled_search');
+    const enrolledClassFilter = document.getElementById('enrolled_class_filter');
+    const enrolledBody        = document.getElementById('enrolled_body');
+    const enrolledCount       = document.getElementById('enrolled_count');
+
+    let enrolledRiders = [];
+
+    // ── Event change: show sections + load enrolled ──
+    eventSelect.addEventListener('change', async function () {
+      const eventId = this.value;
+
+      addSection.style.display      = eventId ? 'block' : 'none';
+      enrolledSection.style.display = eventId ? 'block' : 'none';
+
+      // reset add form
+      riderSearch.value       = '';
+      riderResults.innerHTML  = '';
+      selectedRiderId.value   = '';
+      selectedRiderName.textContent = 'No rider selected';
+      classSelect.value       = '';
+      addError.style.display  = 'none';
+
+      if (!eventId) return;
+      await loadEnrolled(eventId);
+    });
+
+    // ── Load enrolled riders via AJAX ──
+    async function loadEnrolled(eventId) {
+      try {
+        const res = await fetch(`/admin/event-riders/${eventId}/list`);
+        enrolledRiders = await res.json();
+        renderEnrolled();
+      } catch (err) {
+        console.error('Error loading enrolled riders:', err);
+      }
+    }
+
+    // ── Render enrolled table with filters ──
+    function renderEnrolled() {
+      const searchVal = enrolledSearch.value.toLowerCase();
+      const classVal  = enrolledClassFilter.value;
+
+      const filtered = enrolledRiders.filter(r => {
+        const fullName = `${r.name} ${r.surname}`.toLowerCase();
+        const matchName  = !searchVal || fullName.includes(searchVal);
+        const matchClass = !classVal  || r.class_id === classVal;
+        return matchName && matchClass;
+      });
+
+      enrolledBody.innerHTML = '';
+
+      filtered.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.dataset.enrollmentId = r.enrollment_id;
+        tr.innerHTML = `
+          <td>${r.name} ${r.surname}</td>
+          <td>${r.class_name}</td>
+          <td><button class="remove-btn">Remove</button></td>
+        `;
+
+        tr.querySelector('.remove-btn').onclick = async () => {
+          if (!confirm(`Remove ${r.name} ${r.surname} from this event?`)) return;
+          const eventId = eventSelect.value;
+          try {
+            await fetch(`/admin/event-riders/${eventId}/remove/${r.enrollment_id}`, { method: 'POST' });
+            enrolledRiders = enrolledRiders.filter(e => e.enrollment_id.toString() !== r.enrollment_id.toString());
+            renderEnrolled();
+          } catch (err) {
+            console.error('Error removing rider:', err);
+          }
+        };
+
+        enrolledBody.appendChild(tr);
+      });
+
+      enrolledCount.textContent = `Showing ${filtered.length} of ${enrolledRiders.length} riders`;
+    }
+
+    // ── Enrolled filters ──
+    enrolledSearch.addEventListener('input', renderEnrolled);
+    enrolledClassFilter.addEventListener('change', renderEnrolled);
+
+    // ── Rider search in add form ──
+    riderSearch.addEventListener('input', function () {
+      const query = this.value.toLowerCase().trim();
+      riderResults.innerHTML = '';
+
+      if (!query) return;
+
+      const matches = allRiders.filter(r =>
+        `${r.name} ${r.surname}`.toLowerCase().includes(query)
+      ).slice(0, 10);
+
+      if (matches.length === 0) {
+        riderResults.innerHTML = '<p>No riders found</p>';
+        return;
+      }
+
+      matches.forEach(r => {
+        const div = document.createElement('div');
+        div.textContent = `${r.name} ${r.surname}`;
+        div.style.cursor = 'pointer';
+        div.onclick = () => {
+          selectedRiderId.value         = r._id;
+          selectedRiderName.textContent = `Selected: ${r.name} ${r.surname}`;
+          riderSearch.value             = '';
+          riderResults.innerHTML        = '';
+        };
+        riderResults.appendChild(div);
+      });
+    });
+
+    // ── Add rider ──
+    addBtn.addEventListener('click', async () => {
+      const eventId  = eventSelect.value;
+      const riderId  = selectedRiderId.value;
+      const classId  = classSelect.value;
+
+      addError.style.display = 'none';
+
+      if (!riderId) {
+        addError.textContent   = 'Please select a rider';
+        addError.style.display = 'block';
+        return;
+      }
+      if (!classId) {
+        addError.textContent   = 'Please select a class';
+        addError.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res  = await fetch(`/admin/event-riders/${eventId}/add`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ rider_id: riderId, class_id: classId })
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          addError.textContent   = data.error || 'Error adding rider';
+          addError.style.display = 'block';
+          return;
+        }
+
+        // reset add form
+        selectedRiderId.value         = '';
+        selectedRiderName.textContent = 'No rider selected';
+        classSelect.value             = '';
+
+        await loadEnrolled(eventId);
+
+      } catch (err) {
+        console.error('Error adding rider:', err);
+        addError.textContent   = 'Server error';
+        addError.style.display = 'block';
+      }
+    });
+  </script>
+
+</body>
+</html>

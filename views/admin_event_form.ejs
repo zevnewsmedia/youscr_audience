@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin – Create Event</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>Create Event</h1>
+
+<% if (error) { %>
+  <p><strong>Error:</strong> <%= error %></p>
+<% } %>
+<% if (success) { %>
+  <p><strong><%= success %></strong></p>
+<% } %>
+
+<form action="/admin/events/new" method="POST">
+  <table cellpadding="6">
+    <tbody>
+      <tr>
+        <td><label for="name">Event Name</label></td>
+        <td><input type="text" id="name" name="name" value="<%= event.name || '' %>" required></td>
+      </tr>
+      <tr>
+        <td><label for="location">Location</label></td>
+        <td><input type="text" id="location" name="location" value="<%= event.location || '' %>" required></td>
+      </tr>
+      <tr>
+        <td><label for="date">Date</label></td>
+        <td><input type="date" id="date" name="date" value="<%= event.date ? event.date.toISOString().split('T')[0] : '' %>" required></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><button type="submit">Create Event</button></td>
+      </tr>
+    </tbody>
+  </table>
+</form>
+
+</body>
+</html>

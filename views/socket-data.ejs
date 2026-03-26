@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Create New Match</title>
+</head>
+<body>
+<h1>Create New Match</h1>
+
+<h2 id="event_display" style="display: none;">Event: <span id="event_name"></span></h2>
+
+<div id="status">Status: <span id="connection">Connecting...</span></div>
+
+<form action="/fan/vote" method="POST" id="matchForm" style="display: none;">
+<!-- Hidden fields for socket data -->
+<input type="hidden" id="match_id" name="match_id">
+<input type="hidden" id="hotseat_overtake_id" name="hotseat_overtake_id">
+<input type="hidden" id="challenger_overtake_id" name="challenger_overtake_id">
+<!-- Session from server -->
+<input type="hidden" id="fan_session" name="fan_session" value="<%= session || '' %>">
+<div>
+<h3>Choose Winner:</h3>
+<div>
+<input type="radio" id="hotseat" name="overtake_id" value="" required>
+<label for="hotseat" id="hotseat_label">Hotseat</label>
+</div>
+<div>
+<input type="radio" id="challenger" name="overtake_id" value="" required>
+<label for="challenger" id="challenger_label">Challenger</label>
+</div>
+</div>
+<button type="submit">Submit Vote</button>
+</form>
+
+<h2>Socket Data</h2>
+<div id="data">
+<p>Waiting for data...</p>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+socket.on('connect', () => {
+document.getElementById('connection').textContent = 'Connected';
+});
+
+socket.on('disconnect', () => {
+document.getElementById('connection').textContent = 'Disconnected';
+});
+
+socket.onAny((eventName, ...args) => {
+const data = args[0];
+document.getElementById('data').innerHTML = 
+'<strong>Event:</strong> ' + eventName + '<br>' +
+'<strong>Data:</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+
+// Display event name at the top
+if (data.event_name) {
+  document.getElementById('event_name').textContent = data.event_name;
+  document.getElementById('event_display').style.display = 'block';
+}
+
+// Fill hidden form fields
+if (data.match_id) {
+document.getElementById('match_id').value = data.match_id;
+  }
+if (data.hotseat_overtake_id) {
+document.getElementById('hotseat_overtake_id').value = data.hotseat_overtake_id;
+document.getElementById('hotseat').value = data.hotseat_overtake_id;
+  }
+if (data.challenger_overtake_id) {
+document.getElementById('challenger_overtake_id').value = data.challenger_overtake_id;
+document.getElementById('challenger').value = data.challenger_overtake_id;
+  }
+
+// Update radio labels with match display info
+if (data.hotseat_display) {
+const label = document.getElementById('hotseat_label');
+label.innerHTML = data.hotseat_display + ' <span style="color: #ff6b35; font-weight: bold;">(Hot Seat)</span>';
+}
+if (data.challenger_display) {
+const label = document.getElementById('challenger_label');
+label.innerHTML = data.challenger_display + ' <span style="color: #2196F3; font-weight: bold;">(Challenger)</span>';
+}
+
+// Show the form once we have data
+document.getElementById('matchForm').style.display = 'block';
+});
+
+// Add form submit handler to alert data being sent
+document.getElementById('matchForm').addEventListener('submit', function(e) {
+e.preventDefault(); // Prevent immediate submission
+
+// Collect form data
+const formData = new FormData(this);
+const dataToSend = {};
+for (let [key, value] of formData.entries()) {
+dataToSend[key] = value;
+  }
+
+// Get the selected radio button label text
+const selectedRadio = document.querySelector('input[name="overtake_id"]:checked');
+const voteType = selectedRadio ? selectedRadio.nextElementSibling.textContent : 'Unknown';
+
+// Log to console
+console.log('Vote submission:', {
+voteType: voteType,
+fan_session: dataToSend.fan_session,
+match_id: dataToSend.match_id,
+overtake_id: dataToSend.overtake_id
+  });
+
+// Submit the form
+this.submit();
+});
+</script>
+</body>
+</html>

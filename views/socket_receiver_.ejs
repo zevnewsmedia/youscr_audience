@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socket Receiver - Best Rider Voting</title>
+<style>
+body { 
+  font-family: Arial, sans-serif; 
+  margin: 20px; 
+  background-color: #f0f0f0;
+}
+h2, h3 { color: #333; }
+.rider { 
+  margin-bottom: 15px; 
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+label { margin-right: 10px; }
+button { 
+  padding: 10px 20px; 
+  font-size: 16px; 
+  cursor: pointer; 
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+button:hover {
+  background-color: #218838;
+}
+#status {
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.connected {
+  background-color: #d4edda;
+  color: #155724;
+}
+.disconnected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+.waiting {
+  background-color: #fff3cd;
+  color: #856404;
+}
+#riders-container {
+  max-width: 600px;
+}
+</style>
+</head>
+<body>
+<h2>📬 Socket Receiver - Vote for Best Rider</h2>
+
+<div id="status" class="waiting">
+  ⏳ Waiting for data from sender...
+</div>
+
+<h3>Event: Test Event (ID: test-001)</h3>
+
+<div id="riders-container">
+  <p id="no-data">No riders received yet. Waiting for sender...</p>
+</div>
+
+<form id="voting-form" method="POST" action="/test/socket-receiver/vote" style="display: none;">
+  <div id="riders-list"></div>
+  <button type="submit">Submit Votes</button>
+</form>
+
+<!-- ====================================================== -->
+<!-- SOCKET.IO CLIENT SETUP -->
+<!-- ====================================================== -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ====================================================== 
+// INITIALIZE SOCKET CONNECTION
+// ====================================================== 
+const socket = io();
+
+// --------------------------------------------------
+// RECEIVE RIDERS FROM SENDER
+// --------------------------------------------------
+socket.on('update_riders', (data) => {
+  console.log('📬 Received riders from sender:', data);
+  
+  // Update status
+  const statusDiv = document.getElementById('status');
+  statusDiv.className = 'connected';
+  statusDiv.textContent = '✅ Riders received! You can now vote.';
+  
+  // Hide "no data" message
+  document.getElementById('no-data').style.display = 'none';
+  
+  // Show form
+  document.getElementById('voting-form').style.display = 'block';
+  
+  // Clear existing riders
+  const ridersList = document.getElementById('riders-list');
+  ridersList.innerHTML = '';
+  
+  // Build rider voting elements
+  data.riders.forEach((rider, index) => {
+    const riderDiv = document.createElement('div');
+    riderDiv.className = 'rider';
+    
+    riderDiv.innerHTML = `
+      <p><strong>${rider.rider_name || "Unknown"} ${rider.rider_surname || ""}</strong> | Class: ${rider.class_id} | Heat: ${rider.heat}</p>
+      <!-- Hidden field for rider ID -->
+      <input type="hidden" name="votes[${index}][rider_id]" value="${rider.rider_id}">
+      <!-- Radio buttons 1 to 5 -->
+      ${[1, 2, 3, 4, 5].map(score => `
+        <label>
+          <input type="radio" name="votes[${index}][score]" value="${score}" required>
+          ${score}
+        </label>
+      `).join('')}
+      <hr>
+    `;
+    
+    ridersList.appendChild(riderDiv);
+  });
+});
+
+// --------------------------------------------------
+// CONNECTION STATUS
+// --------------------------------------------------
+socket.on('connect', () => {
+  console.log('✅ Connected to server:', socket.id);
+  const statusDiv = document.getElementById('status');
+  if (statusDiv.textContent.includes('Waiting')) {
+    statusDiv.className = 'waiting';
+    statusDiv.textContent = '⏳ Connected. Waiting for data from sender...';
+  }
+});
+
+socket.on('disconnect', () => {
+  console.log('❌ Disconnected from server');
+  const statusDiv = document.getElementById('status');
+  statusDiv.className = 'disconnected';
+  statusDiv.textContent = '❌ Disconnected from server';
+});
+</script>
+</body>
+</html>

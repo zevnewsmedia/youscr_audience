@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Duels Results</title>
+    
+    <script src="/socket.io/socket.io.js"></script>
+
+</head>
+<body>
+     <%- include("../partials/admin_menu") %>
+
+    <div id="sync-overlay" style="display:none;">
+        <h2>🔄 Updating Live Data...</h2>
+    </div>
+
+    <h1>Duels Results — LIVE SYNC ACTIVE</h1>
+
+    <div>
+        <strong>Admin Tools:</strong>
+        <% if (status) { %>
+            <span><%= status %></span>
+        <% } %>
+    </div>
+
+    <form method="GET" action="/admin/results/duels">
+        <select name="event_id">
+            <option value="">-- Select Event --</option>
+            <% events.forEach(event => { %>
+                <option value="<%= event._id %>" <%= event_id == event._id.toString() ? 'selected' : '' %>>
+                    <%= event.name %>
+                </option>
+            <% }) %>
+        </select>
+
+        <select name="heat">
+            <% for (let h = 1; h <= 5; h++) { %>
+                <option value="<%= h %>" <%= current_heat == h ? 'selected' : '' %>>Heat <%= h %></option>
+            <% } %>
+        </select>
+
+        <button type="submit">Load</button>
+    </form>
+
+    <hr>
+
+    <% if (!event_id) { %>
+        <p>Select an event to see duels.</p>
+    <% } else if (duels.length === 0) { %>
+        <p>No matches found for this event and heat.</p>
+    <% } else { %>
+        <p><strong><%= duels.length %></strong> duel(s) found.</p>
+
+        <form action="/admin/results/duels/submit" method="POST">
+            <input type="hidden" name="event_id" value="<%= event_id %>">
+            <input type="hidden" name="heat" value="<%= current_heat %>">
+            <button type="submit">🔄 Push Results to All Screens</button>
+
+            <% duels.forEach((duel, index) => { %>
+                <div>
+                    <p><strong>Duel #<%= index + 1 %></strong> — <%= new Date(duel.created_at).toLocaleString() %> <%= duel.is_active ? '(Active)' : '' %></p>
+
+                    <input type="hidden" name="duels[<%= index %>][duel_id]" value="<%= duel._id %>">
+
+                    <table border="1" cellpadding="6">
+                        <thead>
+                            <tr>
+                                <th>Side</th>
+                                <th>Rider</th>
+                                <th>Trick</th>
+                                <th>Votes</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>A</td>
+                                <% if (duel.trick_a) { %>
+                                    <td>
+                                        <%= duel.trick_a.rider %>
+                                        <input type="hidden" name="duels[<%= index %>][a][rider]" value="<%= duel.trick_a.rider %>">
+                                    </td>
+                                    <td>
+                                        <%= duel.trick_a.trick %>
+                                        <input type="hidden" name="duels[<%= index %>][a][trick]" value="<%= duel.trick_a.trick %>">
+                                    </td>
+                                    <td>
+                                        <%= duel.trick_a.voteCount %>
+                                        <input type="hidden" name="duels[<%= index %>][a][votes]" value="<%= duel.trick_a.voteCount %>">
+                                    </td>
+                                <% } else { %>
+                                    <td colspan="3">No votes yet</td>
+                                <% } %>
+                                <td>
+                                    <% const aWins = duel.winner && duel.trick_a && duel.winner.rider === duel.trick_a.rider %>
+                                    <%= aWins ? 'WIN' : '' %>
+                                    <input type="hidden" name="duels[<%= index %>][a][result]" value="<%= aWins ? 'WIN' : '' %>">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>B</td>
+                                <% if (duel.trick_b) { %>
+                                    <td>
+                                        <%= duel.trick_b.rider %>
+                                        <input type="hidden" name="duels[<%= index %>][b][rider]" value="<%= duel.trick_b.rider %>">
+                                    </td>
+                                    <td>
+                                        <%= duel.trick_b.trick %>
+                                        <input type="hidden" name="duels[<%= index %>][b][trick]" value="<%= duel.trick_b.trick %>">
+                                    </td>
+                                    <td>
+                                        <%= duel.trick_b.voteCount %>
+                                        <input type="hidden" name="duels[<%= index %>][b][votes]" value="<%= duel.trick_b.voteCount %>">
+                                    </td>
+                                <% } else { %>
+                                    <td colspan="3">No votes yet</td>
+                                <% } %>
+                                <td>
+                                    <% const bWins = duel.winner && duel.trick_b && duel.winner.rider === duel.trick_b.rider %>
+                                    <%= bWins ? 'WIN' : '' %>
+                                    <input type="hidden" name="duels[<%= index %>][b][result]" value="<%= bWins ? 'WIN' : '' %>">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <hr>
+            <% }) %>
+        </form>
+
+    <% } %>
+
+    <script>
+        const socket = io();
+
+        socket.on("refresh_results", (data) => {
+            console.log("Sync signal received for Event:", data.event_id);
+
+            const params = new URLSearchParams(window.location.search);
+            const activeEvent = params.get('event_id');
+            const activeHeat = params.get('heat');
+
+            if (data.event_id === activeEvent && data.heat == activeHeat) {
+                document.getElementById('sync-overlay').style.display = 'block';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300); 
+            }
+        });
+    </script>
+
+</body>
+</html>

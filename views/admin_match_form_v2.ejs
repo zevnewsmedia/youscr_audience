@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Set Up a Match (V2)</title>
+</head>
+<body>
+
+  <%- include("partials/admin_menu") %>
+
+  <h1>Set Up a Match</h1>
+
+  <!-- Event selector -->
+  <form method="GET" action="/admin/matches/new-v2">
+    <label for="event_id">Select Event</label>
+    <select name="event_id" id="event_id" onchange="this.form.submit()">
+      <option value="">-- choose an event --</option>
+      <% events.forEach(event => { %>
+        <option value="<%= event._id %>" <%= selectedEvent === event._id.toString() ? 'selected' : '' %>>
+          <%= event.name %> <%= event.deleted ? '(inactive)' : '' %>
+        </option>
+      <% }) %>
+    </select>
+  </form>
+
+  <% if (selectedEvent) { %>
+
+    <hr>
+
+    <%
+      // Group overtakes by class
+      const overtakesByClass = {};
+      overtakes.filter(o => !o.deleted).forEach(o => {
+        const cid = o.class_id ? o.class_id.toString() : 'unknown';
+        if (!overtakesByClass[cid]) overtakesByClass[cid] = [];
+        overtakesByClass[cid].push(o);
+      });
+
+      // Group existing matches by class
+      const matchesByClass = {};
+      matches.forEach(m => {
+        const hotseatOvertake = overtakes.find(o => o._id.toString() === m.hotseat_overtake_id.toString());
+        const cid = hotseatOvertake ? hotseatOvertake.class_id.toString() : 'unknown';
+        if (!matchesByClass[cid]) matchesByClass[cid] = [];
+        matchesByClass[cid].push(m);
+      });
+    %>
+
+    <% Object.keys(overtakesByClass).forEach(classId => { %>
+
+      <%
+        const classOvertakes = overtakesByClass[classId];
+        const classObj = classes.find(c => c._id.toString() === classId);
+        const className = classObj ? classObj.name : classId;
+
+        // Find hotseat for this class
+        const classMatches = matchesByClass[classId] || [];
+        const finalizedClassMatches = classMatches.filter(m => m.finalized);
+        let classHotSeat = null;
+
+        if (finalizedClassMatches.length > 0) {
+          const lastMatch = finalizedClassMatches[finalizedClassMatches.length - 1];
+          const winnerOvertakeId = lastMatch.winner_overtake_id
+            ? lastMatch.winner_overtake_id.toString()
+            : null;
+
+          if (winnerOvertakeId) {
+            const winnerOvertake = overtakes.find(o => o._id.toString() === winnerOvertakeId);
+            if (winnerOvertake) {
+              const overtaker = riders.find(r => r._id.toString() === winnerOvertake.overtaker_id.toString());
+              const overtaken = riders.find(r => r._id.toString() === winnerOvertake.overtaken_id.toString());
+              classHotSeat = {
+                _id: winnerOvertake._id.toString(),
+                heat: winnerOvertake.heat,
+                description: winnerOvertake.description,
+                riderNames: (overtaker ? overtaker.name + ' ' + overtaker.surname : 'Unknown')
+                  + ' → '
+                  + (overtaken ? overtaken.name + ' ' + overtaken.surname : 'Unknown')
+              };
+            }
+          }
+        }
+
+        const challengers = classHotSeat
+          ? classOvertakes.filter(o => o._id.toString() !== classHotSeat._id)
+          : classOvertakes;
+      %>
+
+      <section>
+        <h2>Class: <%= className %></h2>
+
+        <!-- Current hotseat for this class -->
+        <h3>Current Hotseat</h3>
+        <% if (classHotSeat) { %>
+          <table border="1" cellpadding="6" cellspacing="0">
+            <thead>
+              <tr>
+                <th>Heat</th>
+                <th>Riders</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Heat <%= classHotSeat.heat %></td>
+                <td><strong><%= classHotSeat.riderNames %></strong></td>
+                <td><%= classHotSeat.description %></td>
+              </tr>
+            </tbody>
+          </table>
+        <% } else { %>
+          <p>No hotseat yet for this class. This will be the first match — select both sides below.</p>
+        <% } %>
+
+        <br>
+
+        <!-- First match: pick both sides -->
+        <% if (!classHotSeat) { %>
+
+          <h3>First Match — Pick Both Sides</h3>
+          <form method="POST" action="/admin/matches/new" class="match-form">
+            <input type="hidden" name="event_id" value="<%= selectedEvent %>">
+
+            <table border="1" cellpadding="6" cellspacing="0">
+              <thead>
+                <tr>
+                  <th>Heat</th>
+                  <th>Riders</th>
+                  <th>Description</th>
+                  <th>Set as Hotseat</th>
+                  <th>Set as Challenger</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% classOvertakes.forEach(overtake => { %>
+                  <%
+                    const overtaker = riders.find(r => r._id.toString() === overtake.overtaker_id.toString());
+                    const overtaken  = riders.find(r => r._id.toString() === overtake.overtaken_id.toString());
+                    const overtakerName = overtaker ? overtaker.name + ' ' + overtaker.surname : 'Unknown';
+                    const overtakenName = overtaken ? overtaken.name + ' ' + overtaken.surname : 'Unknown';
+                  %>
+                  <tr>
+                    <td>Heat <%= overtake.heat %></td>
+                    <td>
+                      <%= overtakerName %> &rarr; <%= overtakenName %>
+                    </td>
+                    <td><%= overtake.description %></td>
+                    <td align="center">
+                      <input type="radio"
+                        name="hotseat_overtake_id"
+                        value="<%= overtake._id %>"
+                        data-display="Heat <%= overtake.heat %> - <%= overtakerName %> → <%= overtakenName %> - <%= overtake.description %>"
+                        required>
+                    </td>
+                    <td align="center">
+                      <input type="radio"
+                        name="challenger_overtake_id"
+                        value="<%= overtake._id %>"
+                        data-display="Heat <%= overtake.heat %> - <%= overtakerName %> → <%= overtakenName %> - <%= overtake.description %>"
+                        required>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+
+            <br>
+            <button type="submit">Create First Match for <%= className %></button>
+          </form>
+
+        <% } else { %>
+
+          <!-- Normal flow: pick challenger -->
+          <h3>Pick a Challenger</h3>
+          <% if (challengers.length === 0) { %>
+            <p>No other overtakes available to challenge the hotseat in this class.</p>
+          <% } else { %>
+            <table border="1" cellpadding="6" cellspacing="0">
+              <thead>
+                <tr>
+                  <th>Heat</th>
+                  <th>Riders</th>
+                  <th>Description</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% challengers.forEach(overtake => { %>
+                  <%
+                    const overtaker = riders.find(r => r._id.toString() === overtake.overtaker_id.toString());
+                    const overtaken  = riders.find(r => r._id.toString() === overtake.overtaken_id.toString());
+                    const overtakerName = overtaker ? overtaker.name + ' ' + overtaker.surname : 'Unknown';
+                    const overtakenName = overtaken ? overtaken.name + ' ' + overtaken.surname : 'Unknown';
+                  %>
+                  <tr>
+                    <td>Heat <%= overtake.heat %></td>
+                    <td>
+                      <%= overtakerName %> &rarr; <%= overtakenName %>
+                    </td>
+                    <td><%= overtake.description %></td>
+                    <td>
+                      <form method="POST" action="/admin/matches/new" class="match-form">
+                        <input type="hidden" name="event_id" value="<%= selectedEvent %>">
+                        <input type="hidden" name="hotseat_overtake_id" value="<%= classHotSeat._id %>"
+                          data-display="<%= classHotSeat.riderNames %> - Heat <%= classHotSeat.heat %> - <%= classHotSeat.description %>">
+                        <input type="hidden" name="challenger_overtake_id" value="<%= overtake._id %>"
+                          data-display="Heat <%= overtake.heat %> - <%= overtakerName %> → <%= overtakenName %> - <%= overtake.description %>">
+                        <button type="submit">Challenge Hotseat</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } %>
+
+        <% } %>
+
+        <hr>
+
+        <!-- Existing matches for this class -->
+        <h3>Matches in this Class</h3>
+        <% if (!classMatches || classMatches.length === 0) { %>
+          <p>No matches created yet for this class.</p>
+        <% } else { %>
+          <table border="1" cellpadding="6" cellspacing="0">
+            <thead>
+              <tr>
+                <th>Hotseat</th>
+                <th>Challenger</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% classMatches.forEach(match => { %>
+                <tr>
+                  <td>
+                    Heat <%= match.hotseatInfo.heat %> —
+                    <%= match.hotseatInfo.riderNames %><br>
+                    <small><%= match.hotseatInfo.description %></small>
+                  </td>
+                  <td>
+                    Heat <%= match.challengerInfo.heat %> —
+                    <%= match.challengerInfo.riderNames %><br>
+                    <small><%= match.challengerInfo.description %></small>
+                  </td>
+                  <td>
+                    <% if (match.finalized) { %>
+                      Finalized
+                    <% } else if (match.deleted) { %>
+                      Deleted
+                    <% } else { %>
+                      Active
+                    <% } %>
+                  </td>
+                  <td>
+                    <a href="/admin/matches/edit/<%= match._id %>">Edit</a>
+                    &nbsp;|&nbsp;
+                    <% if (!match.deleted) { %>
+                      <form method="POST" action="/admin/matches/<%= match._id %>/delete?event_id=<%= selectedEvent %>" style="display:inline">
+                        <button type="submit">Delete</button>
+                      </form>
+                    <% } else { %>
+                      <form method="POST" action="/admin/matches/<%= match._id %>/restore?event_id=<%= selectedEvent %>" style="display:inline">
+                        <button type="submit">Restore</button>
+                      </form>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } %>
+
+      </section>
+
+      <hr>
+
+    <% }) %>
+
+  <% } %>
+
+  <script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  document.querySelectorAll('.match-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      // 1. PREVENT THE RELOAD (This stops the flickering/disappearing)
+      e.preventDefault(); 
+
+      // 2. Grab the specific checked radio or hidden input
+      const hInput = this.querySelector('[name="hotseat_overtake_id"]:checked') || 
+                     this.querySelector('input[name="hotseat_overtake_id"][type="hidden"]');
+      
+      const cInput = this.querySelector('[name="challenger_overtake_id"]:checked') || 
+                     this.querySelector('input[name="challenger_overtake_id"][type="hidden"]');
+
+      if (!hInput || !cInput) return alert("Selection missing!");
+
+      // 3. Build the payload with the description included
+      const payload = {
+        event_id: this.querySelector('[name="event_id"]').value,
+        hotseat_overtake_id: hInput.value,
+        challenger_overtake_id: cInput.value,
+        hotseat_display: hInput.dataset.display,
+        challenger_display: cInput.dataset.display
+      };
+
+      // 4. Emit the socket
+      socket.emit('match_created', payload);
+
+      // 5. Submit the data to the DB via Fetch instead of a Page Reload
+      // This keeps the Admin on the same page and stops the "Wipe"
+      fetch(this.action, {
+        method: 'POST',
+        body: new URLSearchParams(new FormData(this))
+      }).then(() => {
+        console.log("Database updated & Socket emitted.");
+        // Optional: Add a visual 'Sent' indicator here
+      });
+    });
+  });
+</script>
+</body>
+</html>

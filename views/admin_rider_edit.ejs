@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin – Edit Rider</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>Edit Rider</h1>
+
+<% if (error) { %>
+  <p><strong>Error:</strong> <%= error %></p>
+<% } %>
+<% if (success) { %>
+  <p><strong><%= success %></strong></p>
+<% } %>
+
+<% if (rider) { %>
+  <form method="POST" action="/admin/riders/edit/<%= rider._id %>">
+    <table cellpadding="6">
+      <tbody>
+        <tr>
+          <td><label for="name">Name</label></td>
+          <td><input type="text" id="name" name="name" value="<%= rider.name || '' %>" required></td>
+        </tr>
+        <tr>
+          <td><label for="surname">Surname</label></td>
+          <td><input type="text" id="surname" name="surname" value="<%= rider.surname || '' %>" required></td>
+        </tr>
+        <tr>
+          <td><label for="country">Country</label></td>
+          <td><input type="text" id="country" name="country" value="<%= rider.country || '' %>"></td>
+        </tr>
+        <tr>
+          <td><label for="number">Number</label></td>
+          <td><input type="number" id="number" name="number" value="<%= rider.number || '' %>"></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><button type="submit">Update Rider</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+<% } %>
+
+<p><a href="/admin/riders/list">← Back to Riders</a></p>
+
+</body>
+</html>

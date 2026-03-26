@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin – Riders List</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>Riders List</h1>
+
+<p><a href="/admin/riders/new">+ Create New Rider</a></p>
+
+<% if (error) { %>
+  <p><strong>Error:</strong> <%= error %></p>
+<% } %>
+
+<% if (!riders || riders.length === 0) { %>
+  <p>No riders found.</p>
+<% } else { %>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Surname</th>
+        <th>Team</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% riders.forEach((r, index) => { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td><%= r.name %></td>
+          <td><%= r.surname %></td>
+          <td><%= r.team || '—' %></td>
+          <td><%= r.active === false ? "Inactive" : "Active" %></td>
+          <td>
+            <a href="/admin/riders/edit/<%= r._id %>">Edit</a>
+            &nbsp;|&nbsp;
+            <% if (r.active !== false) { %>
+              <form method="POST" action="/admin/riders/delete/<%= r._id %>" style="display:inline"
+                onsubmit="return confirm('Are you sure you want to delete this rider?');">
+                <button type="submit">Delete</button>
+              </form>
+            <% } else { %>
+              <form method="POST" action="/admin/riders/restore/<%= r._id %>" style="display:inline">
+                <button type="submit">Restore</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+</body>
+</html>

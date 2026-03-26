@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Best Rider of the Heat — Send Riders</title>
+</head>
+<body>
+<%- include("../partials/admin_menu") %>
+
+<h1>Best Rider of the Heat — Send Riders</h1>
+
+<table>
+  <tr>
+    <td><label for="event">Event</label></td>
+    <td>
+      <select id="event">
+        <option value="">-- Select Event --</option>
+        <% events.forEach(e => { %>
+          <option value="<%= e._id %>" data-name="<%= e.name %>"><%= e.name %></option>
+        <% }) %>
+      </select>
+    </td>
+  </tr>
+  <tr>
+    <td><label for="class">Class</label></td>
+    <td>
+      <select id="class">
+        <option value="">-- Select Class --</option>
+        <% classes.forEach(c => { %>
+          <option value="<%= c._id %>"><%= c.name %></option>
+        <% }) %>
+      </select>
+    </td>
+  </tr>
+  <tr>
+    <td><label for="heat">Heat</label></td>
+    <td><input type="number" id="heat" min="1" value="1"></td>
+  </tr>
+  <tr>
+    <td><label for="rider1">Rider 1</label></td>
+    <td>
+      <select id="rider1" disabled>
+        <option value="">-- Select Class first --</option>
+        <% riders.forEach(r => { %>
+          <option value="<%= r._id %>" data-name="<%= r.rider_name %>" data-surname="<%= r.rider_surname %>" data-class="<%= r.class_id %>">
+            <%= r.rider_name %> <%= r.rider_surname %>
+          </option>
+        <% }) %>
+      </select>
+    </td>
+  </tr>
+  <tr>
+    <td><label for="rider2">Rider 2</label></td>
+    <td>
+      <select id="rider2" disabled>
+        <option value="">-- Select Class first --</option>
+        <% riders.forEach(r => { %>
+          <option value="<%= r._id %>" data-name="<%= r.rider_name %>" data-surname="<%= r.rider_surname %>" data-class="<%= r.class_id %>">
+            <%= r.rider_name %> <%= r.rider_surname %>
+          </option>
+        <% }) %>
+      </select>
+    </td>
+  </tr>
+  <tr>
+    <td><label for="rider3">Rider 3</label></td>
+    <td>
+      <select id="rider3" disabled>
+        <option value="">-- Select Class first --</option>
+        <% riders.forEach(r => { %>
+          <option value="<%= r._id %>" data-name="<%= r.rider_name %>" data-surname="<%= r.rider_surname %>" data-class="<%= r.class_id %>">
+            <%= r.rider_name %> <%= r.rider_surname %>
+          </option>
+        <% }) %>
+      </select>
+    </td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>
+      <button onclick="sendRiders()">Send Riders</button>
+    </td>
+  </tr>
+</table>
+
+<p>Status: <strong id="status">Not connected</strong></p>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+socket.on('connect', () => {
+  document.getElementById('status').textContent = 'Connected';
+});
+
+socket.on('disconnect', () => {
+  document.getElementById('status').textContent = 'Not connected';
+});
+
+document.getElementById('class').addEventListener('change', function () {
+  const selectedClass = this.value;
+  ['rider1', 'rider2', 'rider3'].forEach(id => {
+    const select = document.getElementById(id);
+    select.value = '';
+    select.disabled = !selectedClass;
+    select.querySelectorAll('option').forEach(opt => {
+      if (!opt.value) return;
+      opt.hidden = opt.dataset.class !== selectedClass;
+    });
+  });
+});
+
+function sendRiders() {
+  const eventSelect = document.getElementById('event');
+  const eventId     = eventSelect.value;
+  const eventName   = eventSelect.options[eventSelect.selectedIndex]?.dataset.name;
+  const classId     = document.getElementById('class').value;
+  const heat        = parseInt(document.getElementById('heat').value);
+
+  if (!eventId || !classId) {
+    alert('Please select an Event and a Class before continuing.');
+    return;
+  }
+
+  const riders = [];
+  for (let i = 1; i <= 3; i++) {
+    const select = document.getElementById('rider' + i);
+    if (!select.value) {
+      alert('Please select all 3 riders before sending.');
+      return;
+    }
+    const opt = select.options[select.selectedIndex];
+    riders.push({
+      rider_id:      select.value,
+      rider_name:    opt.dataset.name,
+      rider_surname: opt.dataset.surname,
+      class_id:      classId,
+      heat
+    });
+  }
+
+  socket.emit('send_riders', { event_id: eventId, event_name: eventName, riders });
+  alert('Riders sent successfully.');
+}
+</script>
+
+</body>
+</html>

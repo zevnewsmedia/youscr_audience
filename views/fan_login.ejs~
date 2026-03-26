@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Fan Login</title>
+</head>
+<body>
+  <h1>Fan Login</h1>
+
+  <!-- Display error message if exists -->
+  <% if (error) { %>
+    <p style="color:red;"><%= error %></p>
+  <% } %>
+
+  <form action="/fan/login" method="POST">
+    <label for="name">Name:</label><br>
+    <input type="text" id="name" name="name" value="<%= name || '' %>" required><br><br>
+
+    <label for="email">Email:</label><br>
+    <input type="email" id="email" name="email" value="<%= email || '' %>" required><br><br>
+
+    <button type="submit">Start Voting</button>
+  </form>
+</body>
+</html>
+

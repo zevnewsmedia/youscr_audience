@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Best Rider Voting</title>
+</head>
+<body>
+<h2>Vote for Best Rider</h2>
+<% if (session) { %>
+  <p>Welcome, <strong><%= session.fan_name %></strong></p>
+  <p>Event: <%= session.event_name %></p>
+<% } %>
+<h3 id="event-header">Waiting for event data...</h3>
+
+<div id="message"></div>
+
+<div id="heat-winner-banner" style="display:none;">
+  <h2>Heat Winners</h2>
+  <div id="heat-winners-list"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- OVERALL WINNER BANNER                           -->
+<!-- Shown when admin announces the overall champion -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="overall-winner-banner" style="display:none;">
+  <hr>
+  <h2>🏆 Best Rider Overall</h2>
+  <p id="overall-winner-name"></p>
+  <p id="overall-winner-classes"></p>
+  <p id="overall-winner-stats"></p>
+  <hr>
+</div>
+<!-- ═══════════════════════════════════════════════ -->
+<!-- END OVERALL WINNER BANNER                       -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<p id="no-data">Waiting for riders data...</p>
+
+<form id="voting-form">
+  <div id="riders-list">
+    <!-- Riders will be inserted here -->
+  </div>
+  
+  <button type="submit" id="submit-btn" style="display: none;">Submit Votes</button>
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io(); // Fixed 'onst' typo
+
+socket.on('update_riders', (data) => {
+  console.log('Received riders from sender:', data);
+  
+  // HIDE both winner banners when new riders are pushed for a new heat
+  document.getElementById('heat-winner-banner').style.display = 'none';
+  document.getElementById('overall-winner-banner').style.display = 'none';
+  
+  const eventHeader = document.getElementById('event-header');
+  if (data.event_id && data.event_name) {
+    eventHeader.textContent = `Event: ${data.event_name} (ID: ${data.event_id})`;
+  } else if (data.event_id) {
+    eventHeader.textContent = `Event ID: ${data.event_id}`;
+  }
+  
+  const noDataElement = document.getElementById('no-data');
+  if (noDataElement) {
+    noDataElement.style.display = 'none';
+  }
+  
+  const submitBtn = document.getElementById('submit-btn');
+  submitBtn.style.display = 'block';
+  submitBtn.disabled = false;
+  
+  const ridersList = document.getElementById('riders-list');
+  ridersList.innerHTML = '';
+  
+  const eventIdInput = document.createElement('input');
+  eventIdInput.type = 'hidden';
+  eventIdInput.name = 'event_id';
+  eventIdInput.value = data.event_id || data.event;
+  ridersList.appendChild(eventIdInput);
+  
+  data.riders.forEach((rider, index) => {
+    const riderDiv = document.createElement('div');
+    riderDiv.className = 'rider';
+    
+    riderDiv.innerHTML = `
+      <p>
+        <strong>${rider.rider_name || "Unknown"} ${rider.rider_surname || ""}</strong> 
+        (Rider ID: <strong>${rider.rider_id}</strong>) | 
+        Class: <strong>${rider.class_id}</strong> | 
+        Heat: <strong>${rider.heat}</strong>
+      </p>
+      <input type="hidden" name="votes[${index}][rider_id]" value="${rider.rider_id}">
+      <input type="hidden" name="votes[${index}][class_id]" value="${rider.class_id}">
+      <input type="hidden" name="votes[${index}][heat]" value="${rider.heat}">
+      ${[1, 2, 3, 4, 5].map(score => `
+        <label for="rider_${index}_score_${score}">
+          <input 
+            type="radio" 
+            id="rider_${index}_score_${score}"
+            name="votes[${index}][score]" 
+            value="${score}" 
+            required>
+          ${score}
+        </label>
+      `).join('')}
+      <hr>
+    `;
+    
+    ridersList.appendChild(riderDiv);
+  });
+});
+
+// =============================================
+// HEAT WINNERS — SHOW ONLY THE LATEST
+// =============================================
+socket.on('heat_winner', (data) => {
+  console.log('Heat winner received:', data);
+
+  const winnersList = document.getElementById('heat-winners-list');
+  
+  winnersList.innerHTML = `
+    <p>
+      <strong>${data.rider_name} ${data.rider_surname}</strong> —
+      Class: ${data.class_id} —
+      Heat: ${data.heat}<br>
+      Avg Score: <strong>${data.avg_score} / 5</strong> |
+      Total Votes: <strong>${data.total_votes}</strong> |
+      Vote Share: <strong>${data.vote_percentage}%</strong>
+    </p>
+  `;
+
+  document.getElementById('heat-winner-banner').style.display = 'block';
+});
+
+// =============================================
+// OVERALL WINNER — DISPLAY & CLEAN UP
+// =============================================
+socket.on('overall_winner', (data) => {
+  console.log('Overall winner received:', data);
+
+  // NEW: Hide the heat winner banner when the big prize is announced
+  document.getElementById('heat-winner-banner').style.display = 'none';
+
+  document.getElementById('overall-winner-name').textContent =
+    `${data.rider_name} ${data.rider_surname}`;
+
+  document.getElementById('overall-winner-classes').textContent =
+    `Classes: ${data.classes}`;
+
+  document.getElementById('overall-winner-stats').textContent =
+    `Best Heat Avg: ${data.best_heat_avg} / 5 · ` +
+    `Avg Voters/Heat: ${data.avg_voters_per_heat} · ` +
+    `Total Voters: ${data.total_voters} · ` +
+    `Eligible Heats: ${data.eligible_heats}`;
+
+  document.getElementById('overall-winner-banner').style.display = 'block';
+});
+
+// Voting Form Submit Listener
+document.getElementById('voting-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target);
+  const votes = [];
+  const ridersCount = document.querySelectorAll('.rider').length;
+  const eventId = formData.get('event_id');
+  
+  for (let i = 0; i < ridersCount; i++) {
+    const riderId = formData.get(`votes[${i}][rider_id]`);
+    const classId = formData.get(`votes[${i}][class_id]`);
+    const heat = formData.get(`votes[${i}][heat]`);
+    const score = formData.get(`votes[${i}][score]`);
+    
+    if (riderId && score) {
+      votes.push({
+        rider_id: riderId,
+        class_id: classId,
+        heat: parseInt(heat),
+        score: parseInt(score)
+      });
+    }
+  }
+  
+  if (votes.length !== ridersCount) {
+    document.getElementById('message').innerHTML = '<p>Please vote for all riders!</p>';
+    return;
+  }
+  
+  try {
+    const response = await fetch('/fan/best-rider/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: eventId, votes })
+    });
+    
+    const messageDiv = document.getElementById('message');
+    if (response.ok) {
+      messageDiv.innerHTML = '<p>Votes submitted successfully! Waiting for next riders...</p>';
+      e.target.reset();
+      document.getElementById('submit-btn').disabled = true;
+      document.getElementById('riders-list').innerHTML = '<p>Waiting for next riders...</p>';
+    } else {
+      const result = await response.json().catch(() => ({ message: 'Failed to submit' }));
+      messageDiv.innerHTML = `<p>Error: ${result.message}</p>`;
+    }
+    
+    setTimeout(() => { messageDiv.innerHTML = ''; }, 3000);
+    
+  } catch (error) {
+    console.error('Error submitting votes:', error);
+    document.getElementById('message').innerHTML = '<p>Network error. Please try again.</p>';
+  }
+});
+
+socket.on('connect', () => { console.log('Connected to server:', socket.id); });
+socket.on('disconnect', () => { console.log('Disconnected from server'); });
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Match</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>Edit Match</h1>
+
+<form method="POST" action="/admin/matches/update/<%= match._id %>">
+  <input type="hidden" name="event_id" value="<%= match.event_id %>">
+
+  <p>
+    <label for="hotseat_overtake_id">Hotseat Overtake:</label><br>
+    <select id="hotseat_overtake_id" name="hotseat_overtake_id" required>
+      <% overtakes.forEach(o => { %>
+        <option value="<%= o._id %>" <%= o._id.toString() === match.hotseat_overtake_id.toString() ? "selected" : "" %>>
+          Heat <%= o.heat %> — <%= o.description %>
+        </option>
+      <% }) %>
+    </select>
+  </p>
+
+  <p>
+    <label for="challenger_overtake_id">Challenger Overtake:</label><br>
+    <select id="challenger_overtake_id" name="challenger_overtake_id" required>
+      <% overtakes.forEach(o => { %>
+        <option value="<%= o._id %>" <%= o._id.toString() === match.challenger_overtake_id.toString() ? "selected" : "" %>>
+          Heat <%= o.heat %> — <%= o.description %>
+        </option>
+      <% }) %>
+    </select>
+  </p>
+
+  <p>
+    <label for="round">Round (optional):</label><br>
+    <input type="text" id="round" name="round" value="<%= match.round || '' %>">
+  </p>
+
+  <button type="submit">Update Match</button>
+  <a href="/admin/matches/new?event_id=<%= match.event_id %>">Cancel</a>
+</form>
+
+</body>
+</html>

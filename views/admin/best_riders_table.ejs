@@ -1,0 +1,57 @@
+<% if (selectedClass && selectedClass !== "") { %>
+  <h3>Class: <%= selectedClass %></h3>
+<% } else { %>
+  <h3>All Classes</h3>
+<% } %>
+
+<table id="main-contestants-table" border="1" cellpadding="5" cellspacing="0" width="100%">
+  <thead>
+    <tr bgcolor="#eeeeee">
+      <th align="left">Rider</th>
+      <th align="left">Class</th>
+      <th align="left">Heat</th>
+      <th align="left">Status</th> <th align="left">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (contestants && contestants.length > 0) { %>
+      <% contestants.forEach(item => { %>
+        <tr <% if (item.deleted) { %> style="background-color: #f9f9f9; color: #999;" <% } %>>
+          <td>
+            <% if (item.rider_details) { %>
+              <b><%= item.rider_details.name %> <%= item.rider_details.surname %></b>
+            <% } else { %>
+              <font color="red">Unknown (ID: <%= item.rider_id %>)</font>
+            <% } %>
+          </td>
+          
+          <td><%= item.class_id %></td>
+          <td><%= item.heat %></td>
+
+          <td>
+            <% if (item.deleted) { %>
+              <b style="color: red;">DELETED</b>
+            <% } else { %>
+              <b style="color: green;">ACTIVE</b>
+            <% } %>
+          </td>
+
+          <td>
+            <% if (!item.deleted) { %>
+              <button type="button" onclick="deleteEntry('<%= item._id %>')">
+                Remove
+              </button>
+            <% } else { %>
+              <i>Removed</i>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    <% } else { %>
+      <tr>
+        <td colspan="5" align="center"> <i>No contestants found for this selection.</i>
+        </td>
+      </tr>
+    <% } %>
+  </tbody>
+</table>

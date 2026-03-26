@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Admin — Best Overtake Match Results</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>Best Overtake Match Results</h1>
+
+<form action="/admin/matches/results" method="GET">
+  <label for="event_id">Filter by Event:</label>
+  <select id="event_id" name="event_id" onchange="this.form.submit()">
+    <option value="">-- All Events --</option>
+    <% events.forEach(event => { %>
+      <option value="<%= event._id %>" <%= event_id && event_id === event._id.toString() ? 'selected' : '' %>>
+        <%= event.name %>
+      </option>
+    <% }) %>
+  </select>
+</form>
+
+<hr>
+
+<% if (error) { %>
+  <p><%= error %></p>
+<% } %>
+
+<% if (!results || results.length === 0) { %>
+  <p>No matches found.</p>
+<% } else { %>
+  <% results.forEach((m, index) => { %>
+    <details open>
+   <summary>
+  <strong>Match #<%= index + 1 %></strong>
+  <% if (m.class_id && m.class_id !== "N/A") { %> — [<%= m.class_id %>] <% } %>
+  <% if (m.round) { %> — Round <%= m.round %><% } %>
+  <% if (m.finalized) { %> — Finalized<% } else { %> — Active<% } %>
+</summary>
+
+      <table border="1">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Hotseat</th>
+            <th>Challenger</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Rider</strong></td>
+            <td>
+              <% if (m.hotseat) { %>
+                <%= m.hotseat.overtaker.name %> <%= m.hotseat.overtaker.surname %>
+                to
+                <%= m.hotseat.overtaken.name %> <%= m.hotseat.overtaken.surname %>
+              <% } else { %>Not set<% } %>
+            </td>
+            <td>
+              <% if (m.challenger) { %>
+                <%= m.challenger.overtaker.name %> <%= m.challenger.overtaker.surname %>
+                to
+                <%= m.challenger.overtaken.name %> <%= m.challenger.overtaken.surname %>
+              <% } else { %>Not set<% } %>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Description</strong></td>
+            <td><% if (m.hotseat) { %><em><%= m.hotseat.description %></em><% } %></td>
+            <td><% if (m.challenger) { %><em><%= m.challenger.description %></em><% } %></td>
+          </tr>
+          <tr>
+            <%
+              const totalVotes = m.votes.total || 0;
+              const hotseatPct = totalVotes > 0 ? ((m.votes.hotseat / totalVotes) * 100).toFixed(1) : 0;
+              const challengerPct = totalVotes > 0 ? ((m.votes.challenger / totalVotes) * 100).toFixed(1) : 0;
+              const marginVotes = Math.abs(m.votes.hotseat - m.votes.challenger);
+              const marginPct = totalVotes > 0 ? ((marginVotes / totalVotes) * 100).toFixed(1) : 0;
+              let winner = null;
+              let winnerLabel = 'Draw';
+              if (m.votes.hotseat > m.votes.challenger && m.hotseat) {
+                winner = m.hotseat.overtaker;
+                winnerLabel = 'Hotseat';
+              } else if (m.votes.challenger > m.votes.hotseat && m.challenger) {
+                winner = m.challenger.overtaker;
+                winnerLabel = 'Challenger';
+              }
+            %>
+            <td><strong>Votes</strong></td>
+            <td><%= m.votes.hotseat %> (<%= hotseatPct %>%)</td>
+            <td><%= m.votes.challenger %> (<%= challengerPct %>%)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        <strong>Total Votes:</strong> <%= totalVotes %><br>
+        <strong>Result:</strong>
+        <% if (!winner) { %>
+          Draw
+        <% } else { %>
+          <%= winnerLabel %> — <%= winner.name %> <%= winner.surname %>
+          | Margin: <%= marginVotes %> votes (<%= marginPct %>%)
+        <% } %>
+      </p>
+
+      <details>
+        <summary>Voters (<%= m.voters.length %>)</summary>
+        <% if (m.voters.length === 0) { %>
+          <p>No votes yet.</p>
+        <% } else { %>
+          <ol>
+            <% m.voters.forEach(v => { %>
+              <li><%= v.fan_name %> (<%= v.fan_email %>) — overtake <code><%= v.overtake_id %></code></li>
+            <% }) %>
+          </ol>
+        <% } %>
+      </details>
+
+      <p>
+        <form action="/admin/matches/<%= m._id %>/finalize" method="POST">
+          <button type="submit"><%= m.finalized ? "Unfinalize" : "Finalize" %> Match</button>
+        </form>
+        <% if (m.finalized) { %>
+          <form action="/admin/matches/<%= m._id %>/champion" method="POST" onsubmit="return confirmChampion(this)">
+            <input type="hidden" name="matchIndex" value="<%= index + 1 %>">
+            <input type="hidden" name="matchId" value="<%= m._id %>">
+            <input type="hidden" name="action" value="<%= m.champion ? 'Unset' : 'Set' %>">
+            <input type="hidden" name="winner" value="<%= winnerLabel %>">
+            <input type="hidden" name="match_number" value="<%= index + 1 %>">
+            <% if (winner) { %>
+              <input type="hidden" name="winnerName" value="<%= winner.name %> <%= winner.surname %>">
+            <% } %>
+            <button type="submit"><%= m.champion ? "Unset Champion" : "Set Champion" %></button>
+          </form>
+        <% } %>
+      </p>
+
+    </details>
+    <hr>
+  <% }) %>
+<% } %>
+
+<script>
+  function confirmChampion(form) {
+    const data = Object.fromEntries(new FormData(form));
+    const msg = [
+      `${data.action} champion for Match #${data.matchIndex}?`,
+      `Match ID: ${data.matchId}`,
+      data.winnerName ? `Winner: ${data.winner} — ${data.winnerName}` : 'Result: Draw',
+    ].join('\n');
+    return confirm(msg);
+  }
+</script>
+
+</body>
+</html>

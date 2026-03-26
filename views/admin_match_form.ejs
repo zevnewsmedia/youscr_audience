@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Create Overtake Match</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>Create Overtake Match</h1>
+
+<% if (error) { %>
+  <p><%= error %></p>
+<% } %>
+
+<% if (success) { %>
+  <p><%= success %></p>
+<% } %>
+
+<form method="GET" action="/admin/matches/new">
+  <label for="event_id">Event:</label><br>
+  <select id="event_id" name="event_id" onchange="this.form.submit()" required>
+    <option value="">-- Select Event --</option>
+    <% for (let i = 0; i < events.length; i++) {
+         let event = events[i];
+    %>
+      <option value="<%= event._id.toString() %>" <%= selectedEvent && selectedEvent.toString() === event._id.toString() ? "selected" : "" %>>
+        <%= event.name %> <%= event.deleted ? "(inactive)" : "" %>
+      </option>
+    <% } %>
+  </select>
+</form>
+
+<% if (selectedEvent) { %>
+
+  <hr>
+
+  <h2>Current Hot Seat</h2>
+
+  <% if (currentHotSeat) { %>
+    <p>
+      <strong>Rider(s):</strong> <%= currentHotSeat.riderNames %><br>
+      <strong>Heat:</strong> <%= currentHotSeat.heat %><br>
+      <strong>Description:</strong> <%= currentHotSeat.description %><br>
+      <% if (currentHotSeat.votes) { %>
+        <strong>Votes:</strong>
+        Total: <%= currentHotSeat.votes.total %>,
+        Hotseat: <%= currentHotSeat.votes.hotseat %>,
+        Challenger: <%= currentHotSeat.votes.challenger %><br>
+      <% } else { %>
+        <strong>Votes:</strong> No votes yet<br>
+      <% } %>
+      <strong>Winner:</strong> <%= currentHotSeat.winnerNames || "TBD" %>
+    </p>
+  <% } else { %>
+    <p>No current hot seat for this event.</p>
+  <% } %>
+
+  <hr>
+
+  <% if (overtakes && overtakes.length > 0) { %>
+
+    <h2>Create New Match</h2>
+
+    <form method="POST" action="/admin/matches/new" id="create-match-form">
+      <input type="hidden" name="event_id" value="<%= selectedEvent.toString() %>">
+
+      <p>
+        <% if (currentHotSeat) { %>
+          <input type="hidden" name="hotseat_overtake_id" value="<%= currentHotSeat._id %>">
+          <strong>Hotseat (locked):</strong> <%= currentHotSeat.riderNames %>
+        <% } else { %>
+          <label for="hotseat_overtake_id">Hotseat Overtake:</label><br>
+          <select name="hotseat_overtake_id" id="hotseat_overtake_id" required>
+            <option value="">-- Select Hotseat --</option>
+            <% for (let i = 0; i < overtakes.length; i++) {
+                 let o = overtakes[i];
+                 if (o.deleted) continue;
+                 let overtaker = riders.find(r => r._id.toString() === o.overtaker_id.toString());
+                 let overtaken = riders.find(r => r._id.toString() === o.overtaken_id.toString());
+            %>
+              <option value="<%= o._id.toString() %>"
+                      data-display="Heat <%= o.heat %> - <%= overtaker ? overtaker.name : 'Unknown' %> to <%= overtaken ? overtaken.name : 'Unknown' %> - <%= o.description %>">
+                Heat <%= o.heat %> — <%= overtaker ? overtaker.name : "Unknown" %> to <%= overtaken ? overtaken.name : "Unknown" %> — <%= o.description %>
+              </option>
+            <% } %>
+          </select>
+        <% } %>
+      </p>
+
+      <p>
+        <label for="challenger_overtake_id">Challenger Overtake:</label><br>
+        <select name="challenger_overtake_id" id="challenger_overtake_id" required>
+          <option value="">-- Select Challenger --</option>
+          <% for (let i = 0; i < overtakes.length; i++) {
+               let o = overtakes[i];
+               if (o.deleted) continue;
+               let overtaker = riders.find(r => r._id.toString() === o.overtaker_id.toString());
+               let overtaken = riders.find(r => r._id.toString() === o.overtaken_id.toString());
+          %>
+            <option value="<%= o._id.toString() %>"
+                    data-display="Heat <%= o.heat %> - <%= overtaker ? overtaker.name : 'Unknown' %> to <%= overtaken ? overtaken.name : 'Unknown' %> - <%= o.description %>">
+              Heat <%= o.heat %> — <%= overtaker ? overtaker.name : "Unknown" %> to <%= overtaken ? overtaken.name : "Unknown" %> — <%= o.description %>
+            </option>
+          <% } %>
+        </select>
+      </p>
+
+      <button type="submit">Create Match</button>
+    </form>
+
+    <hr>
+
+    <h2>Available Overtakes</h2>
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Heat</th>
+          <th>Overtaker</th>
+          <th>Overtaken</th>
+          <th>Class</th>
+          <th>Status</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% for (let i = 0; i < overtakes.length; i++) {
+             let o = overtakes[i];
+             let overtaker = riders.find(r => r._id.toString() === o.overtaker_id.toString());
+             let overtaken = riders.find(r => r._id.toString() === o.overtaken_id.toString());
+             let cls = classes.find(c => c._id.toString() === o.class_id.toString());
+        %>
+          <tr>
+            <td><%= o.heat %></td>
+            <td><%= overtaker ? overtaker.name + " " + overtaker.surname : "Unknown" %></td>
+            <td><%= overtaken ? overtaken.name + " " + overtaken.surname : "Unknown" %></td>
+            <td><%= cls ? cls.name : "Unknown" %></td>
+            <td><%= o.deleted ? "Inactive" : (o.status || "Unknown") %></td>
+            <td><em><%= o.description %></em></td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+
+    <% if (matches && matches.length > 0) { %>
+
+      <hr>
+
+      <h2>Existing Matches</h2>
+
+      <table border="1">
+        <thead>
+          <tr>
+            <th>Hotseat</th>
+            <th>Challenger</th>
+            <th>Round</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (let i = 0; i < matches.length; i++) {
+               let m = matches[i];
+          %>
+            <tr>
+              <td>
+                <%= m.hotseatInfo.riderNames %><br>
+                <em>Heat <%= m.hotseatInfo.heat %> — <%= m.hotseatInfo.description %></em>
+              </td>
+              <td>
+                <%= m.challengerInfo.riderNames %><br>
+                <em>Heat <%= m.challengerInfo.heat %> — <%= m.challengerInfo.description %></em>
+              </td>
+              <td><%= m.round || "—" %></td>
+              <td>
+                <% if (m.deleted) { %>
+                  Inactive
+                <% } else if (m.finalized === true) { %>
+                  Finalized
+                <% } else { %>
+                  Active
+                <% } %>
+              </td>
+              <td>
+                <% if (!m.deleted && m.finalized !== true) { %>
+                  <form method="POST" action="/admin/matches/<%= m._id %>/delete">
+                    <button type="submit" onclick="return confirm('Are you sure you want to delete this match?');">Delete</button>
+                  </form>
+                  <a href="/admin/matches/edit/<%= m._id %>">Edit</a>
+                <% } else if (m.deleted) { %>
+                  <form method="POST" action="/admin/matches/<%= m._id %>/restore">
+                    <button type="submit">Restore</button>
+                  </form>
+                <% } else { %>
+                  <em>No actions available</em>
+                <% } %>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+
+    <% } else { %>
+      <p>No matches created for this event yet.</p>
+    <% } %>
+
+  <% } else { %>
+    <p>No overtakes found for this event.</p>
+  <% } %>
+
+<% } %>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+socket.on('connect', () => {
+  console.log('Match Admin connected to socket server:', socket.id);
+});
+
+socket.on('disconnect', () => {
+  console.log('Match Admin disconnected from socket server');
+});
+
+const createMatchForm = document.getElementById('create-match-form');
+
+if (createMatchForm) {
+  createMatchForm.addEventListener('submit', function(e) {
+    const formData = new FormData(this);
+    const eventId = formData.get('event_id');
+    const hotseatOvertakeId = formData.get('hotseat_overtake_id');
+    const challengerOvertakeId = formData.get('challenger_overtake_id');
+
+    const eventSelect = document.querySelector('select[name="event_id"]');
+    const eventName = eventSelect ? eventSelect.options[eventSelect.selectedIndex].text.trim() : '';
+
+    let hotseatDisplay = '';
+    <% if (currentHotSeat) { %>
+      hotseatDisplay = '<%= currentHotSeat.riderNames %> (Heat <%= currentHotSeat.heat %> - <%= currentHotSeat.description %>)';
+    <% } else { %>
+      const hotseatSelect = document.getElementById('hotseat_overtake_id');
+      if (hotseatSelect && hotseatSelect.selectedIndex > 0) {
+        hotseatDisplay = hotseatSelect.options[hotseatSelect.selectedIndex].dataset.display;
+      }
+    <% } %>
+
+    let challengerDisplay = '';
+    const challengerSelect = document.getElementById('challenger_overtake_id');
+    if (challengerSelect && challengerSelect.selectedIndex > 0) {
+      challengerDisplay = challengerSelect.options[challengerSelect.selectedIndex].dataset.display;
+    }
+
+    socket.emit('match_created', {
+      event_id: eventId,
+      event_name: eventName,
+      hotseat_overtake_id: hotseatOvertakeId,
+      challenger_overtake_id: challengerOvertakeId,
+      hotseat_display: hotseatDisplay,
+      challenger_display: challengerDisplay,
+      timestamp: new Date().toISOString(),
+      created_by: 'admin'
+    });
+  });
+}
+</script>
+
+</body>
+</html>

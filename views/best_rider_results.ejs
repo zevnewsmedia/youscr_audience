@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Best Rider Results</title>
+</head>
+<body>
+<%- include("../partials/admin_menu") %>
+
+<h1>Best Rider Results</h1>
+
+<form action="/admin/best-rider/results" method="GET">
+  <label for="event_id">Filter by Event:</label>
+  <select id="event_id" name="event_id" onchange="this.form.submit()">
+    <option value="">All Events</option>
+    <% events.forEach(event => { %>
+      <option value="<%= event._id %>" <%= selectedEvent == event._id ? 'selected' : '' %>>
+        <%= event.name %>
+      </option>
+    <% }); %>
+  </select>
+</form>
+
+<hr>
+
+<% if (error) { %>
+  <p><strong>Error:</strong> <%= error %></p>
+<% } %>
+<% if (success) { %>
+  <p><strong>Success:</strong> <%= success %></p>
+<% } %>
+
+<% if (results.length === 0) { %>
+  <p>No voting results found.</p>
+<% } else { %>
+
+  <%
+    const classes = {};
+    results.forEach(row => {
+      const classKey = (row.event_id ? row.event_id.toString() : '') + row.class_id;
+      if (!classes[classKey]) {
+        classes[classKey] = { label: row.class_id, event_name: row.event_name, heats: {} };
+      }
+      if (!classes[classKey].heats[row.heat]) {
+        classes[classKey].heats[row.heat] = [];
+      }
+      classes[classKey].heats[row.heat].push(row);
+    });
+  %>
+
+  <% Object.keys(classes).forEach(classKey => { %>
+
+    <h2><%= classes[classKey].event_name %> — Class: <%= classes[classKey].label %></h2>
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Heat</th>
+          <th>Rider</th>
+          <th>Avg. Score (1-5)</th>
+          <th>Total Score</th>
+          <th>Total Voters</th>
+          <th>Status</th>
+          <th>Champion</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% Object.keys(classes[classKey].heats).forEach(heat => {
+            const heatKey = classKey + heat;
+            const heatChampionId = championMap[heatKey];
+            const heatHasChampion = !!heatChampionId;
+        %>
+          <% classes[classKey].heats[heat].forEach(row => {
+              const classKey2 = (row.event_id ? row.event_id.toString() : '') + row.class_id;
+              const heatKey2 = classKey2 + row.heat;
+              const minVotes = Math.ceil(totalVotesPerClass[classKey2] * 0.10);
+              const isEligible = row.voteCount >= minVotes;
+              const isTopRider = topRiderPerHeat[heatKey2] === row.rider_id.toString();
+              const isChampion = championMap[heatKey2] === row.rider_id.toString();
+          %>
+          <tr>
+            <td><%= heat %><% if (heatHasChampion && isChampion) { %> — <strong>Champion Set</strong><% } %></td>
+            <td>
+              <%= row.rider_name %> <%= row.rider_surname %>
+              <% if (!isEligible) { %><em>(not eligible — min <%= minVotes %> votes required)</em><% } %>
+            </td>
+            <td><strong><%= row.averageScore %></strong></td>
+            <td><%= row.totalScore %></td>
+            <td><%= row.voteCount %></td>
+            <td><%= row.finalized ? 'Finalized' : 'Active' %></td>
+            <td>
+              <% if (isChampion) { %>
+                <strong>Champion</strong>
+                <form method="POST" action="/admin/best-rider/unset-champion"
+                      onsubmit="return confirm('Remove <%= row.rider_name %> <%= row.rider_surname %> as champion for class <%= row.class_id %> heat <%= row.heat %>?')">
+                  <input type="hidden" name="rider_id"  value="<%= row.rider_id %>">
+                  <input type="hidden" name="event_id"  value="<%= row.event_id %>">
+                  <input type="hidden" name="class_id"  value="<%= row.class_id %>">
+                  <input type="hidden" name="heat"      value="<%= row.heat %>">
+                  <button type="submit">Unset Champion</button>
+                </form>
+              <% } else if (isTopRider && !heatHasChampion) { %>
+                <form method="POST" action="/admin/best-rider/set-champion"
+                      onsubmit="return confirm('Set <%= row.rider_name %> <%= row.rider_surname %> as champion for class <%= row.class_id %> heat <%= row.heat %>?')">
+                  <input type="hidden" name="rider_id"  value="<%= row.rider_id %>">
+                  <input type="hidden" name="event_id"  value="<%= row.event_id %>">
+                  <input type="hidden" name="class_id"  value="<%= row.class_id %>">
+                  <input type="hidden" name="heat"      value="<%= row.heat %>">
+                  <button type="submit">Set as Champion</button>
+                </form>
+              <% } else if (!isEligible) { %>
+                <em>Not eligible</em>
+              <% } %>
+            </td>
+          </tr>
+          <% }); %>
+        <% }); %>
+      </tbody>
+    </table>
+    <br>
+  <% }); %>
+
+  <hr>
+
+  <h2>Best Rider Overall</h2>
+  <p>Ranking based on each rider's best single heat average across all classes and heats.<br>
+  Tie-breaker: avg voters per heat (normalized). Total voters shown for reference only.</p>
+
+  <% if (overallRankings.length === 0) { %>
+    <p>No eligible riders found for overall ranking.</p>
+  <% } else { %>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Rider</th>
+          <th>Classes</th>
+          <th>Best Heat Avg (1-5)</th>
+          <th>Avg Voters / Heat</th>
+          <th>Total Voters</th>
+          <th>Eligible Heats</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% overallRankings.forEach((rider, index) => {
+            const rank = index + 1;
+            const prev = index > 0 ? overallRankings[index - 1] : null;
+
+            let tbColumn = null;
+            if (prev && rider.bestHeatAvg === prev.bestHeatAvg) {
+              if (rider.avgVotersPerHeat !== prev.avgVotersPerHeat)   tbColumn = 'avgVoters';
+              else if (rider.overallAvg  !== prev.overallAvg)         tbColumn = 'avgVoters';
+              else if (rider.eligibleHeats !== prev.eligibleHeats)    tbColumn = 'heats';
+            }
+        %>
+          <tr>
+            <td><strong>#<%= rank %></strong></td>
+            <td><%= rider.rider_name %> <%= rider.rider_surname %></td>
+            <td><%= rider.classes %></td>
+            <td><strong><%= rider.bestHeatAvg %></strong></td>
+            <td>
+              <%= rider.avgVotersPerHeat %>
+              <% if (tbColumn === 'avgVoters') { %><em>(tie-breaker)</em><% } %>
+            </td>
+            <td><%= rider.totalVoters %></td>
+            <td>
+              <%= rider.eligibleHeats %>
+              <% if (tbColumn === 'heats') { %><em>(tie-breaker)</em><% } %>
+            </td>
+            <td>
+              <% if (rank === 1) { %>
+                <form method="POST" action="/admin/best-rider/announce-overall-champion"
+                      onsubmit="return confirm('Announce <%= rider.rider_name %> <%= rider.rider_surname %> as Overall Best Rider to all fans?')">
+                  <input type="hidden" name="rider_name"          value="<%= rider.rider_name %>">
+                  <input type="hidden" name="rider_surname"       value="<%= rider.rider_surname %>">
+                  <input type="hidden" name="classes"             value="<%= rider.classes %>">
+                  <input type="hidden" name="best_heat_avg"       value="<%= rider.bestHeatAvg %>">
+                  <input type="hidden" name="avg_voters_per_heat" value="<%= rider.avgVotersPerHeat %>">
+                  <input type="hidden" name="total_voters"        value="<%= rider.totalVoters %>">
+                  <input type="hidden" name="eligible_heats"      value="<%= rider.eligibleHeats %>">
+                  <input type="hidden" name="event_id"            value="<%= selectedEvent || '' %>">
+                  <button type="submit">Announce Overall Champion</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+
+<% } %>
+
+<br>
+<a href="/admin/best-rider/list">Back to List</a>
+
+</body>
+</html>

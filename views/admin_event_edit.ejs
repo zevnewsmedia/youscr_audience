@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin – Edit Event</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>Edit Event</h1>
+
+<% if (error) { %>
+  <p><strong>Error:</strong> <%= error %></p>
+<% } %>
+<% if (success) { %>
+  <p><strong><%= success %></strong></p>
+<% } %>
+
+<% if (event) { %>
+  <form method="POST" action="/admin/events/edit/<%= event._id %>">
+    <table cellpadding="6">
+      <tbody>
+        <tr>
+          <td><label for="name">Name</label></td>
+          <td><input type="text" id="name" name="name" value="<%= event.name || '' %>" required></td>
+        </tr>
+        <tr>
+          <td><label for="location">Location</label></td>
+          <td><input type="text" id="location" name="location" value="<%= event.location || '' %>" required></td>
+        </tr>
+        <tr>
+          <td><label for="date">Date</label></td>
+          <td><input type="date" id="date" name="date" value="<%= event.date ? event.date.toISOString().substring(0,10) : '' %>" required></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><button type="submit">Update Event</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+<% } %>
+
+<p><a href="/admin/events/list">← Back to Events</a></p>
+
+</body>
+</html>

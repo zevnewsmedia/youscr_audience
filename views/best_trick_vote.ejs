@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head><title>YouSCR Vote</title></head>
+<body>
+    <div id="voting-container" style="display:none;">
+        <p>Your Voter ID: <%= fan_id %></p>
+        <h2 id="heat-title">New Duel!</h2>
+        <button id="btn-a" onclick="submitVote(this.value)">
+            <b id="name-a"></b><br><span id="trick-a"></span>
+        </button>
+        <p>VS</p>
+        <button id="btn-b" onclick="submitVote(this.value)">
+            <b id="name-b"></b><br><span id="trick-b"></span>
+        </button>
+    </div>
+    <div id="thanks" style="display:none;"><h2>Vote Recorded!</h2></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let matchData = {};
+
+        socket.on('new_trick_duel', (data) => {
+            matchData = data;
+            document.getElementById('name-a').innerText = data.trick_a.rider;
+            document.getElementById('trick-a').innerText = data.trick_a.name;
+            document.getElementById('btn-a').value = data.trick_a_id;
+            
+            document.getElementById('name-b').innerText = data.trick_b.rider;
+            document.getElementById('trick-b').innerText = data.trick_b.name;
+            document.getElementById('btn-b').value = data.trick_b_id;
+
+            document.getElementById('voting-container').style.display = 'block';
+            document.getElementById('thanks').style.display = 'none';
+        });
+
+        async function submitVote(voted_id) {
+            await fetch('/fan/best-trick/vote', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    match_id: matchData.match_id,
+                    event_id: matchData.event_id,
+                    heat: matchData.heat,
+                    voted_trick_id: voted_id
+                })
+            });
+            document.getElementById('voting-container').style.display = 'none';
+            document.getElementById('thanks').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

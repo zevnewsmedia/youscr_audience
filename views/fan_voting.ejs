@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>YOUSCR | Fan Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<% if (session) { %>
+    <div>
+        Welcome, <strong><%= session.fan_name %></strong><br>
+        Event: <strong><%= session.event_name %></strong>
+    </div>
+<% } %>
+
+<div id="heat-winner-banner" style="display:none;">
+    <h2 id="heat-winner-text">Heat Winner!</h2>
+    <div id="heat-winner-content"></div>
+</div>
+
+<div id="overall-winner-banner" style="display:none;">
+    <h2>🏆 Official Event Champion 🏆</h2>
+    <div id="overall-winner-content"></div>
+</div>
+
+<div id="waiting">📡 Waiting for live activity...</div>
+<div id="main-container"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const container = document.getElementById('main-container');
+    const waiting = document.getElementById('waiting');
+
+    // Essential: Join the room for this specific event
+    const eventId = "<%= session.event_id %>";
+    if (eventId) {
+        socket.emit('join_event', eventId);
+    }
+
+    function clearUI() {
+        document.getElementById('heat-winner-banner').style.display = 'none';
+        document.getElementById('overall-winner-banner').style.display = 'none';
+        waiting.style.display = 'none';
+        container.innerHTML = '';
+    }
+
+    /* =====================================================
+       1. MATCH VOTING (Overtakes)
+    ===================================================== */
+    socket.on('new_match_notification', (data) => {
+        clearUI();
+        const matchClass = data.class_id || "Active Match";
+
+        container.innerHTML = `
+            <div>
+                <h2>${matchClass}</h2>
+                <hr>
+                <div id="vote-actions">
+                    <p>Hotseat:</p>
+                    <button onclick="voteMatch(this, '${data.match_id}', '${data.hotseat_overtake_id}')">
+                        ${data.hotseat_display}
+                    </button>
+                    
+                    <p>VS</p>
+                    
+                    <p>Challenger:</p>
+                    <button onclick="voteMatch(this, '${data.match_id}', '${data.challenger_overtake_id}')">
+                        ${data.challenger_display}
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    /* =====================================================
+       2. BEST RIDER VOTING (Scores)
+    ===================================================== */
+    socket.on('update_riders', (data) => {
+        clearUI();
+        const heatNumber = (data.riders && data.riders.length > 0) ? data.riders[0].heat : "";
+
+        let ridersHtml = data.riders.map((rider, i) => `
+            <div>
+                <p>
+                    <strong>${rider.rider_name} ${rider.rider_surname}</strong>
+                    <span>(${rider.class_id || 'N/A'})</span>
+                </p>
+                <input type="hidden" name="votes[${i}][rider_id]" value="${rider.rider_id}">
+                <input type="hidden" name="votes[${i}][class_id]" value="${rider.class_id}">
+                <input type="hidden" name="votes[${i}][heat]" value="${rider.heat}">
+                
+                <div>
+                    ${[1, 2, 3, 4, 5].map(num => `
+                        <label><input type="radio" name="votes[${i}][score]" value="${num}" required> ${num}</label>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div>
+                <h2>Score the Riders - Heat ${heatNumber}</h2>
+                <form id="rider-form">
+                    <input type="hidden" name="event_id" value="${data.event_id}">
+                    ${ridersHtml}
+                    <button type="submit" id="rider-submit-btn">Submit All Scores</button>
+                </form>
+            </div>
+        `;
+        document.getElementById('rider-form').onsubmit = (e) => submitRiderScores(e);
+    });
+
+    /* =====================================================
+       3. BEST TRICK VOTING
+    ===================================================== */
+    socket.on('new_trick_duel', (data) => {
+        clearUI();
+        const heatDisplay = data.heat ? `Heat ${data.heat}` : "Special Round";
+
+        container.innerHTML = `
+            <div>
+                <h2>BEST TRICK VOTE - ${heatDisplay}</h2>
+                <hr>
+                <button onclick="submitTrickVote(this, '${data.trick_a_id}', '${data.match_id}', '${data.event_id}', '${data.heat}')">
+                    <strong>${data.trick_a.rider}</strong><br>
+                    <span>${data.trick_a.name}</span>
+                </button>
+
+                <p>VS</p>
+
+                <button onclick="submitTrickVote(this, '${data.trick_b_id}', '${data.match_id}', '${data.event_id}', '${data.heat}')">
+                    <strong>${data.trick_b.rider}</strong><br>
+                    <span>${data.trick_b.name}</span>
+                </button>
+            </div>
+        `;
+    });
+
+    /* =====================================================
+       4. BEST TRICK STANDINGS (Leaderboard)
+    ===================================================== */
+    socket.on('show_leaderboard', (data) => {
+        clearUI();
+        
+        let rowsHtml = data.standings.map((row, index) => `
+            <tr>
+                <td>#${index + 1}</td>
+                <td>
+                    <strong>${row.rider}</strong><br>
+                    <small>${row.trick}</small>
+                </td>
+                <td>${row.voteCount}</td>
+            </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <div>
+                <h2>Best Trick Standings - Heat ${data.heat}</h2>
+                <table border="1" width="100%">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Rider</th>
+                            <th>Votes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+                <p>Waiting for next activity...</p>
+            </div>
+        `;
+    });
+
+    /* =====================================================
+       5. BEST TRICK CHAMPION ANNOUNCEMENT
+    ===================================================== */
+    socket.on('champion_crowned', (data) => {
+        clearUI();
+        const banner = document.getElementById('overall-winner-banner');
+        const content = document.getElementById('overall-winner-content');
+        
+        content.innerHTML = `
+            <h1>${data.rider_name}</h1>
+            <p>WINNER OF BEST TRICK - HEAT ${data.heat}</p>
+        `;
+        
+        banner.style.display = 'block';
+        container.innerHTML = "<h3>Competition Concluded!</h3>";
+    });
+
+/* =====================================================
+       5b. BEST OVERTAKE CHAMPION ANNOUNCEMENT
+    ===================================================== */
+    socket.on('match_champion', (data) => {
+        clearUI();
+        const banner = document.getElementById('overall-winner-banner');
+        const content = document.getElementById('overall-winner-content');
+        
+        content.innerHTML = `
+            <h1>${data.winner_name}</h1>
+            <p>WINNER OF ${data.class_name} - Match #${data.match_number}</p> <small>Margin: ${data.margin_votes} votes (${data.margin_pct}%)</small>
+        `;
+        
+        banner.style.display = 'block';
+        container.innerHTML = "<h3>Overtake Match Concluded!</h3>";
+    });
+
+/* =====================================================
+   5c. MATCH WINNER ANNOUNCEMENT
+===================================================== */
+socket.on('match_winner_announced', (data) => {
+    clearUI();
+    const banner = document.getElementById('heat-winner-banner'); // or overall-winner-banner
+    const content = document.getElementById('heat-winner-content'); // or overall-winner-content
+    
+    // Update this part specifically:
+    content.innerHTML = `
+        <h3>${data.winner_name}</h3>
+        <p>CLASS: <strong>${data.class_name}</strong></p>
+        <p>Margin: <strong>${data.margin_pct}%</strong></p>
+    `;
+    
+    document.getElementById('heat-winner-banner').style.display = 'block';
+    container.innerHTML = "<h3>Match Concluded!</h3>";
+});
+
+    /* =====================================================
+       6. POST SUBMISSION LOGIC
+    ===================================================== */
+    function voteMatch(btn, mId, oId) {
+        disableAllButtons();
+        fetch('/fan/vote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ match_id: mId, overtake_id: oId })
+        }).then(res => res.ok ? showSuccess("Vote Recorded!") : alert("Error"));
+    }
+
+    async function submitRiderScores(e) {
+        e.preventDefault();
+        disableAllButtons();
+        const formData = new FormData(e.target);
+        const votes = [];
+        const riderEntries = document.querySelectorAll('input[name$="[rider_id]"]').length;
+        
+        for (let i = 0; i < riderEntries; i++) {
+            votes.push({
+                rider_id: formData.get(`votes[${i}][rider_id]`),
+                class_id: formData.get(`votes[${i}][class_id]`),
+                heat: parseInt(formData.get(`votes[${i}][heat]`)),
+                score: parseInt(formData.get(`votes[${i}][score]`))
+            });
+        }
+        
+        fetch('/fan/best-rider/vote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: formData.get('event_id'), votes })
+        }).then(res => res.ok ? showSuccess("Scores Submitted!") : alert("Error"));
+    }
+
+    function submitTrickVote(btn, votedId, matchId, eventId, heat) {
+        disableAllButtons();
+        fetch('/fan/best-trick/vote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                match_id: matchId, 
+                event_id: eventId, 
+                voted_trick_id: votedId,
+                heat: heat 
+            })
+        }).then(res => res.ok ? showSuccess("Trick Vote Recorded!") : alert("Error"));
+    }
+
+    /* =====================================================
+       7. HELPERS & RESULTS
+    ===================================================== */
+    function disableAllButtons() {
+        document.querySelectorAll('button').forEach(b => b.disabled = true);
+    }
+
+    function showSuccess(msg) {
+        container.innerHTML = `<div><h3>✅ ${msg}</h3><p>Wait for the next round...</p></div>`;
+    }
+
+    socket.on('heat_winner', (data) => {
+        const banner = document.getElementById('heat-winner-banner');
+        const content = document.getElementById('heat-winner-content');
+        content.innerHTML = `<h3>${data.rider_name} ${data.rider_surname}</h3><p>Avg: <strong>${data.avg_score}</strong></p>`;
+        banner.style.display = 'block';
+    });
+
+    socket.on('overall_winner', (data) => {
+        clearUI();
+        const banner = document.getElementById('overall-winner-banner');
+        const content = document.getElementById('overall-winner-content');
+        content.innerHTML = `<h1>${data.rider_name} ${data.rider_surname}</h1><p>Final Avg: ${data.best_heat_avg}</p>`;
+        banner.style.display = 'block';
+        container.innerHTML = "<h3>Event Completed!</h3>";
+    });
+</script>
+</body>
+</html>

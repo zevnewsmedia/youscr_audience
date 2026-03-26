@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Socket Sender</title>
+<style>
+body { 
+  font-family: Arial, sans-serif; 
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 20px;
+}
+label {
+  display: block;
+  margin: 15px 0 5px;
+  font-weight: bold;
+}
+select, input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover {
+  background: #0056b3;
+}
+#status {
+  margin-top: 15px;
+  padding: 10px;
+  text-align: center;
+  border-radius: 4px;
+  background: #f8d7da;
+  color: #721c24;
+}
+#status.connected {
+  background: #d4edda;
+  color: #155724;
+}
+</style>
+</head>
+<body>
+<h2>Socket Sender</h2>
+
+<label>Event</label>
+<select id="event">
+  <option value="">Select Event</option>
+  <% events.forEach(e => { %>
+    <option value="<%= e._id %>"><%= e.name %></option>
+  <% }) %>
+</select>
+
+<label>Class</label>
+<select id="class">
+  <option value="">Select Class</option>
+  <% classes.forEach(c => { %>
+    <option value="<%= c._id %>"><%= c.name %></option>
+  <% }) %>
+</select>
+
+<label>Heat</label>
+<input type="number" id="heat" min="1" value="1">
+
+<label>Rider 1</label>
+<select id="rider1">
+  <option value="">Select Rider</option>
+  <% riders.forEach(r => { %>
+    <option value="<%= r._id %>" data-name="<%= r.name %>" data-surname="<%= r.surname %>">
+      <%= r.name %> <%= r.surname %>
+    </option>
+  <% }) %>
+</select>
+
+<label>Rider 2</label>
+<select id="rider2">
+  <option value="">Select Rider</option>
+  <% riders.forEach(r => { %>
+    <option value="<%= r._id %>" data-name="<%= r.name %>" data-surname="<%= r.surname %>">
+      <%= r.name %> <%= r.surname %>
+    </option>
+  <% }) %>
+</select>
+
+<label>Rider 3</label>
+<select id="rider3">
+  <option value="">Select Rider</option>
+  <% riders.forEach(r => { %>
+    <option value="<%= r._id %>" data-name="<%= r.name %>" data-surname="<%= r.surname %>">
+      <%= r.name %> <%= r.surname %>
+    </option>
+  <% }) %>
+</select>
+
+<button onclick="sendRiders()">Send Riders</button>
+
+<div id="status">Not connected</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+function sendRiders() {
+  const eventId = document.getElementById('event').value;
+  const classId = document.getElementById('class').value;
+  const heat = parseInt(document.getElementById('heat').value);
+  
+  if (!eventId || !classId) {
+    alert('Select Event and Class');
+    return;
+  }
+  
+  const riders = [1, 2, 3].map(i => {
+    const select = document.getElementById('rider' + i);
+    if (!select.value) {
+      alert('Select all 3 riders');
+      return null;
+    }
+    const option = select.options[select.selectedIndex];
+    return {
+      rider_id: select.value,
+      rider_name: option.dataset.name,
+      rider_surname: option.dataset.surname,
+      class_id: classId,
+      heat: heat
+    };
+  });
+  
+  if (riders.includes(null)) return;
+  
+  socket.emit('send_riders', { riders });
+  alert('Riders sent!');
+}
+
+socket.on('connect', () => {
+  const status = document.getElementById('status');
+  status.textContent = 'Connected';
+  status.className = 'connected';
+});
+
+socket.on('disconnect', () => {
+  const status = document.getElementById('status');
+  status.textContent = 'Not connected';
+  status.className = '';
+});
+</script>
+</body>
+</html>

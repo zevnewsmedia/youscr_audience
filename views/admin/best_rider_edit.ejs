@@ -1,0 +1,39 @@
+<%- include("../partials/admin_menu") %>
+
+
+<h1>✏️ Edit Best Rider</h1>
+
+<form method="POST" action="/admin/best-rider/edit/<%= contest._id %>">
+
+  <label>Event</label><br>
+  <select name="event_id" required>
+    <% events.forEach(e => { %>
+      <option value="<%= e._id %>" <%= e._id == contest.event_id ? "selected" : "" %>>
+        <%= e.name %>
+      </option>
+    <% }) %>
+  </select><br><br>
+
+  <label>Class</label><br>
+  <select name="class_id" required>
+    <% classes.forEach(c => { %>
+      <option value="<%= c._id %>" <%= c._id == contest.class_id ? "selected" : "" %>>
+        <%= c.name %>
+      </option>
+    <% }) %>
+  </select><br><br>
+
+  <label>Heat</label><br>
+  <input type="number" name="heat" value="<%= contest.heat %>" required><br><br>
+
+  <label>Rider</label><br>
+  <select name="rider_id" required>
+    <% riders.forEach(r => { %>
+      <option value="<%= r._id %>" <%= r._id == contest.rider_id ? "selected" : "" %>>
+        <%= r.name %> <%= r.surname %>
+      </option>
+    <% }) %>
+  </select><br><br>
+
+  <button type="submit">Update</button>
+</form>

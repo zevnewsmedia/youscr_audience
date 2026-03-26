@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouSCR Vote</title>
+</head>
+<body>
+    <h1>LIVE TRICK VOTE</h1>
+
+    <p>Logged in as: <strong><%= fan_id %></strong></p>
+
+    <div id="voting-container" style="display:none;">
+        
+        <input type="hidden" id="hidden-fan-id" value="<%= fan_id %>">
+
+        <h2 id="heat-title">New Duel!</h2>
+
+        <button id="btn-a" onclick="submitVote(this.value)">
+            <b id="name-a"></b><br>
+            <span id="trick-a"></span>
+        </button>
+
+        <p>VS</p>
+
+        <button id="btn-b" onclick="submitVote(this.value)">
+            <b id="name-b"></b><br>
+            <span id="trick-b"></span>
+        </button>
+    </div>
+
+    <div id="thanks" style="display:none;">
+        <h2>VOTE RECEIVED!</h2>
+        <p>Your voter ID (<%= fan_id %>) has been logged.</p>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentMatch = {};
+
+        // Receive the Duel via Socket
+        socket.on('new_trick_duel', (data) => {
+            currentMatch = data;
+            
+            document.getElementById('name-a').innerText = data.trick_a.rider;
+            document.getElementById('trick-a').innerText = data.trick_a.name;
+            document.getElementById('btn-a').value = data.trick_a_id;
+            
+            document.getElementById('name-b').innerText = data.trick_b.rider;
+            document.getElementById('trick-b').innerText = data.trick_b.name;
+            document.getElementById('btn-b').value = data.trick_b_id;
+
+            document.getElementById('voting-container').style.display = 'block';
+            document.getElementById('thanks').style.display = 'none';
+        });
+
+        // Submit Vote via Fetch
+        async function submitVote(voted_id) {
+            // Pull the fan_id from the hidden input field
+            const fId = document.getElementById('hidden-fan-id').value;
+
+            const response = await fetch('/fan/best-trick/vote', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    fan_id: fId,
+                    match_id: currentMatch.match_id,
+                    event_id: currentMatch.event_id,
+                    voted_trick_id: voted_id
+                })
+            });
+
+            if (response.ok) {
+                document.getElementById('voting-container').style.display = 'none';
+                document.getElementById('thanks').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

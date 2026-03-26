@@ -1,0 +1,31 @@
+CREATE A WAY TO NOT NEED TO SELECT THE EVENT EVERY THIME
+T
+
+
+HIS MUST SHOW THE CONTESTANTS - NO NEED TO GO TO OTHER SECTION TO SEE WHO IS IN THE SET
+
+http://localhost:3000/admin/best-rider/new
+
+
+ADD FILTER BY CLASS
+
+/admin/best-rider/list?event_id=69aeb1c6332d8447ca24f222
+
+
+ADD A CONFIRMATION DIALOG TO SEE IF THE RIDERS ARE THE RIGH ONE
+
+http://localhost:3000/admin/best-rider/match
+
+
+
+THE SOCKET MUST CLEAN THE PREVIOUS DATA
+
+http://localhost:3000/fan/best-rider
+
+IF NOT ACTIVED, THE RIDER MUST NOT BE DISPLAYED
+
+http://localhost:3000/admin/best-rider/match
+
+OVERALL CHAMPION NOT SET AS SO IN THE BUTTON
+
+

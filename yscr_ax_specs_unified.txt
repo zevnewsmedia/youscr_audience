@@ -1,0 +1,790 @@
+================================================================================
+UNIFIED FAN VOTING SYSTEM SPECIFICATION
+================================================================================
+
+--------------------------------------------------------------------------------
+FANS INTERFACE
+--------------------------------------------------------------------------------
+
+Screen 1: Fan Login
+-------------------
+Purpose: Create a controlled voting session.
+
+UI Elements:
+- Name input field
+- Email input field
+- [Start Voting] button
+
+Behavior:
+- Generates a unique session token upon login
+- Session token:
+  - Prevents duplicate votes across all vote types
+  - Persists across multiple matches in the same heat
+  - Tracks all fan voting activity
+- Active event, class, and heat are automatically assigned based on what's 
+  currently live
+- Fans have no control over what event/class/heat they're voting on
+
+--------------------------------------------------------------------------------
+
+Screen 2: Best Overtake Voting
+-------------------------------
+Purpose: Vote on a single head-to-head overtake match.
+
+Context Display (Read-Only):
+- Event Name
+- Class Name
+- Heat Number
+- Progress: "Match X of Y" (Y increases dynamically as admin adds overtakes)
+
+Match Structure:
+┌─────────────────────────────────────────┐
+│         HOTSEAT: Overtake A             │
+│  Overtaker → Overtaken                  │
+│  Description: [Admin-defined text]      │
+└─────────────────────────────────────────┘
+
+           VS
+
+┌─────────────────────────────────────────┐
+│       CHALLENGER: Overtake B            │
+│  Overtaker → Overtaken                  │
+│  Description: [Admin-defined text]      │
+└─────────────────────────────────────────┘
+
+    [Vote HOTSEAT]  [Vote CHALLENGER]
+
+         ⏱️ 30 seconds remaining
+
+Voting Rules:
+- Timer: 30 seconds per match
+- One vote per match per session
+- If no vote is submitted before timeout → HOTSEAT wins by default
+- No abstention allowed
+- No replay or vote changes
+
+Data Collected Per Vote:
+- Selected side (hotseat / challenger)
+- Response time (milliseconds)
+- Timestamp
+- Device type
+- Browser
+- Network carrier
+
+Linking:
+- event_id
+- class_id
+- heat
+- match_id
+- session_id
+
+Critical Rule: 
+Fans never select riders, overtakes, or matchups. They only vote on matches 
+presented by the admin.
+
+--------------------------------------------------------------------------------
+
+Screen 3: Best Overtake Result
+-------------------------------
+Purpose: Display the final outcome after the heat is closed by admin.
+
+Displayed Information:
+- Winning Overtake:
+  - Overtaker → Overtaken
+  - Description
+- Winning Rider (the overtaker)
+- Event name
+- Class name
+- Heat number
+- Total matches the winning overtake faced
+- Optional: Total votes accumulated by winning overtake
+
+--------------------------------------------------------------------------------
+
+Screen 4: Best Rider Voting
+----------------------------
+Purpose: Separate popularity-based vote, independent from overtake voting.
+
+UI Elements:
+┌─────────────────────────────────────────┐
+│      Vote for Best Rider - Heat 1       │
+├─────────────────────────────────────────┤
+│  ○ Rider 1 Name (Team)                  │
+│  ○ Rider 2 Name (Team)                  │
+│  ○ Rider 3 Name (Team)                  │
+│  ...                                     │
+├─────────────────────────────────────────┤
+│         [Submit Vote]                    │
+│       ⏱️ 45 seconds remaining            │
+└─────────────────────────────────────────┘
+
+Voting Rules:
+- Timer: 45 seconds
+- One vote per heat per session
+- Rider options pulled from Event → Class assignment
+- Votes stored immediately upon submission
+- Session token prevents duplicates
+
+Optional Enhancement:
+- Hover/tap on rider → show bio modal
+
+Linking:
+- event_id
+- class_id
+- heat
+- session_id
+
+================================================================================
+ADMINS INTERFACE
+================================================================================
+
+Screen 1: Admin Login
+---------------------
+┌─────────────────────────────────────────┐
+│         Admin Panel Login               │
+├─────────────────────────────────────────┤
+│  Username: [____________]               │
+│  Password: [____________]               │
+│                                          │
+│           [Login]                        │
+└─────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+
+Screen 2: Riders Management
+----------------------------
+Purpose: Central rider registry - create once, reuse everywhere.
+
+Actions:
+- Add Rider
+  - Name
+  - Surname
+  - Team
+  - Bio (for fan viewing)
+  - Photo (upload/URL)
+- Edit Rider (update any field)
+- Delete Rider (with confirmation)
+
+Display: 
+Table with columns: Name | Surname | Team | Actions [Edit] [Delete]
+
+Notes:
+- Riders are global - reusable across all events and classes
+- Deleting a rider should warn if they're assigned to active events
+
+--------------------------------------------------------------------------------
+
+Screen 3: Classes Management
+-----------------------------
+Purpose: Define competition categories.
+
+Actions:
+- Add Class
+  - Name (e.g., "450", "250", "125")
+- Edit Class (rename)
+- Delete Class (with confirmation)
+
+Display: 
+List or table of classes with edit/delete actions
+
+Notes:
+- Classes are global - reusable across all events
+- Deleting a class should warn if it's assigned to active events
+
+--------------------------------------------------------------------------------
+
+Screen 4: Event Management
+---------------------------
+Purpose: Bind riders and classes to specific events.
+
+Create Event Form:
+
+Event Name: [____________]
+Date: [YYYY-MM-DD]
+Stop: [Round 1, Round 2, etc.]
+Location: [____________]
+Description: [____________]
+
+Assigned Classes:
+  ☑ 450
+    Assigned Riders:
+    ☑ Rider A
+    ☑ Rider B
+    ☑ Rider C
+  
+  ☑ 250
+    Assigned Riders:
+    ☑ Rider D
+    ☑ Rider E
+
+[Save Event]
+
+Edit Capabilities:
+- Modify event details (name, date, stop, location, description)
+- Add/remove classes from event
+- Add/remove riders per class
+
+Display: 
+Events list with [Edit] [Delete] actions
+
+--------------------------------------------------------------------------------
+
+Screen 5: Heat Control Center
+------------------------------
+Purpose: Unified interface for creating overtakes and managing matches in 
+real-time.
+
+### Tab 1: Create Overtakes ###
+
+┌─────────────────────────────────────────┐
+│       Overtake Creation Panel           │
+├─────────────────────────────────────────┤
+│ Event: [Dropdown - Active Events]       │
+│ Class: [Dropdown - Classes in Event]    │
+│ Heat:  [Heat 1] [Heat 2] [Heat 3]       │
+├─────────────────────────────────────────┤
+│ Overtaker:  [Dropdown - Riders]         │
+│ Overtaken:  [Dropdown - Riders]         │
+│ (Cannot select same rider)               │
+├─────────────────────────────────────────┤
+│ Description:                             │
+│ ┌─────────────────────────────────────┐ │
+│ │ Describe how overtake happened...   │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│      [Add Overtake to Queue]            │
+└─────────────────────────────────────────┘
+
+Behavior:
+- Admin creates overtakes in real-time as they happen on track
+- Each overtake is added with status = "pending"
+- Overtakes queue up for match selection
+- No predefined overtakes exist
+
+### Tab 2: Match Control ###
+
+┌─────────────────────────────────────────┐
+│     Live Match Control - Heat 1         │
+│  Event: SX Brasil | Class: 450          │
+├─────────────────────────────────────────┤
+│ CURRENT HOTSEAT:                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ Lucas Moreno → Bruno Silva          │ │
+│ │ "Aggressive pass on turn 1"         │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ SELECT NEXT CHALLENGER:                  │
+│ [Dropdown - Pending Overtakes ▼]        │
+│                                          │
+│ Preview:                                 │
+│ João Santos → Rafael Lima                │
+│ "Inside move on whoops section"          │
+├─────────────────────────────────────────┤
+│         [Start Match]                    │
+│                                          │
+│ Current Match Status: Voting Live        │
+│ ⏱️ 18 seconds remaining                  │
+│ Votes - Hotseat: 45 | Challenger: 52    │
+└─────────────────────────────────────────┘
+
+Initial Hotseat Selection:
+- First match of the heat: Admin manually selects the initial hotseat from 
+  pending overtakes
+- Subsequent matches: Winner automatically becomes/remains hotseat
+
+Match Flow:
+1. Admin selects challenger from pending overtakes dropdown
+2. Clicks [Start Match]
+3. Fan voting opens for 30 seconds
+4. Match auto-completes when timer expires
+5. Winner promoted to hotseat (or stays if already hotseat)
+6. Loser marked as "eliminated"
+7. Admin selects next challenger to continue
+
+Controls During Active Match:
+- [Pause Match] (emergency stop)
+- [End Match Early] (manual override)
+- Live vote counter display
+
+Heat Closure:
+- [Close Heat] button becomes available when admin decides to end
+- Closing heat:
+  - Marks current hotseat as "winner"
+  - Prevents new matches from starting
+  - Triggers Best Overtake Result display for fans
+  - Locks heat from further modification
+
+### Tab 3: Match History ###
+
+┌──────────────────────────────────────────────────────────┐
+│             Heat 1 - Match History                       │
+├───────┬─────────────────┬─────────────────┬─────────────┤
+│ Match │ Hotseat         │ Challenger      │ Winner      │
+├───────┼─────────────────┼─────────────────┼─────────────┤
+│   1   │ Lucas → Bruno   │ João → Rafael   │ João        │
+│   2   │ João → Rafael   │ Pedro → Marcos  │ João        │
+│   3   │ João → Rafael   │ Carlos → Andre  │ Carlos      │
+│   4   │ Carlos → Andre  │ Felipe → Diego  │ [ACTIVE]    │
+├───────┴─────────────────┴─────────────────┴─────────────┤
+│ Votes: H: 89 | C: 95 | Timer: 12s remaining             │
+└──────────────────────────────────────────────────────────┘
+
+Display:
+- All completed matches with winners
+- Currently active match highlighted
+- Vote counts per completed match
+- Status indicators: Completed | Active | Cancelled
+
+--------------------------------------------------------------------------------
+
+Screen 6: Best Rider Vote Management
+-------------------------------------
+Purpose: Control when and how Best Rider voting occurs.
+
+┌─────────────────────────────────────────┐
+│      Best Rider Vote Control            │
+├─────────────────────────────────────────┤
+│ Event: [Dropdown]                        │
+│ Class: [Dropdown]                        │
+│ Heat:  [Heat 1] [Heat 2] [Heat 3]       │
+├─────────────────────────────────────────┤
+│ Status: Not Started                      │
+│                                          │
+│ [Open Best Rider Voting]                 │
+│                                          │
+│ Timer: 45 seconds (auto-close)           │
+└─────────────────────────────────────────┘
+
+Current Results (Live):
+─────────────────────────
+Rider A: 145 votes (45%)
+Rider B: 98 votes (30%)
+Rider C: 79 votes (25%)
+
+Behavior:
+- Admin manually opens Best Rider voting when desired
+- Voting runs for 45 seconds
+- Auto-closes when timer expires
+- One Best Rider vote per heat per session
+- Results visible to admin in real-time
+- Final results can be displayed to fans after closure
+
+--------------------------------------------------------------------------------
+
+Screen 7: Heat Dashboard (Analytics)
+-------------------------------------
+Purpose: Monitor live performance and analyze fan engagement.
+
+Displays:
+
+Current Match Stats:
+- Live vote counts (Hotseat vs Challenger)
+- Average response time
+- Participation rate (votes / active sessions)
+
+Heat Overview:
+- Total matches run
+- Total votes cast
+- Average match duration
+
+Fan Engagement Metrics:
+- Active sessions count
+- Device breakdown (mobile/desktop/tablet)
+- Browser distribution
+- Carrier distribution
+- Response time histogram
+
+Overtake Performance:
+- Each overtake's win/loss record
+- Total votes received
+- Average vote margin
+
+Filtering:
+- By event
+- By class
+- By heat
+- By date range
+
+================================================================================
+MONGODB COLLECTIONS
+================================================================================
+
+1. Riders Collection
+--------------------
+{
+  "_id": ObjectId("rider_id"),
+  "name": "John",
+  "surname": "Doe",
+  "team": "Team X",
+  "bio": "Rider biography and achievements",
+  "photo": "https://example.com/photos/johndoe.jpg",
+  "created_at": ISODate("2026-01-01T00:00:00Z"),
+  "updated_at": ISODate("2026-01-05T00:00:00Z")
+}
+
+--------------------------------------------------------------------------------
+
+2. Classes Collection
+---------------------
+{
+  "_id": ObjectId("class_id"),
+  "name": "450",
+  "created_at": ISODate("2026-01-01T00:00:00Z")
+}
+
+--------------------------------------------------------------------------------
+
+3. Events Collection
+--------------------
+{
+  "_id": ObjectId("event_id"),
+  "name": "SX Brasil",
+  "date": ISODate("2026-02-15"),
+  "stop": "Round 1",
+  "location": "São Paulo, Brazil",
+  "description": "Opening round of the championship",
+  "classes": [
+    {
+      "class_id": ObjectId("class_450_id"),
+      "rider_ids": [
+        ObjectId("rider1_id"),
+        ObjectId("rider2_id"),
+        ObjectId("rider3_id")
+      ]
+    },
+    {
+      "class_id": ObjectId("class_250_id"),
+      "rider_ids": [
+        ObjectId("rider4_id"),
+        ObjectId("rider5_id")
+      ]
+    }
+  ],
+  "created_at": ISODate("2026-01-10T00:00:00Z"),
+  "updated_at": ISODate("2026-01-15T00:00:00Z")
+}
+
+--------------------------------------------------------------------------------
+
+4. Fans Collection (Sessions)
+------------------------------
+{
+  "_id": ObjectId("session_id"),
+  "name": "John Doe",
+  "email": "john@example.com",
+  "created_at": ISODate("2026-02-15T12:00:00Z"),
+  "device": "mobile",
+  "browser": "Chrome",
+  "carrier": "Verizon",
+  
+  // Overtake votes
+  "overtake_votes": [
+    {
+      "event_id": ObjectId("event_id"),
+      "class_id": ObjectId("class_id"),
+      "heat": 1,
+      "match_id": ObjectId("match_id"),
+      "selected": "challenger", // or "hotseat"
+      "response_time_ms": 1200,
+      "timestamp": ISODate("2026-02-15T12:30:45Z")
+    }
+  ],
+  
+  // Best Rider votes
+  "rider_votes": [
+    {
+      "event_id": ObjectId("event_id"),
+      "class_id": ObjectId("class_id"),
+      "heat": 1,
+      "rider_id": ObjectId("rider_id"),
+      "timestamp": ISODate("2026-02-15T13:00:00Z")
+    }
+  ]
+}
+
+--------------------------------------------------------------------------------
+
+5. Overtakes Collection
+------------------------
+{
+  "_id": ObjectId("overtake_id"),
+  "event_id": ObjectId("event_id"),
+  "class_id": ObjectId("class_id"),
+  "heat": 1,
+  "overtaker_id": ObjectId("riderA_id"),
+  "overtaken_id": ObjectId("riderB_id"),
+  "description": "Aggressive pass on turn 1 under braking",
+  "status": "pending", 
+  // Status values: pending | active_hotseat | active_challenger | 
+  //                eliminated | winner
+  "created_at": ISODate("2026-02-15T12:25:00Z"),
+  
+  // Match performance tracking
+  "matches_won": 0,
+  "matches_lost": 0,
+  "total_votes_received": 0
+}
+
+Status Lifecycle:
+- pending: Created but not yet in a match
+- active_hotseat: Currently the hotseat in an active match
+- active_challenger: Currently the challenger in an active match
+- eliminated: Lost a match and removed from competition
+- winner: Won the heat (final hotseat when heat closes)
+
+--------------------------------------------------------------------------------
+
+6. Matches Collection
+----------------------
+{
+  "_id": ObjectId("match_id"),
+  "event_id": ObjectId("event_id"),
+  "class_id": ObjectId("class_id"),
+  "heat": 1,
+  "match_number": 3,
+  
+  "hotseat_overtake_id": ObjectId("o1_id"),
+  "challenger_overtake_id": ObjectId("o2_id"),
+  "winner_overtake_id": ObjectId("o2_id"), // null until match completes
+  
+  "status": "completed", // pending | active | completed | cancelled
+  
+  "votes": {
+    "hotseat": 95,
+    "challenger": 120
+  },
+  
+  "started_at": ISODate("2026-02-15T12:30:00Z"),
+  "completed_at": ISODate("2026-02-15T12:30:30Z"),
+  "duration_seconds": 30,
+  
+  // Analytics
+  "average_response_time_ms": 1450,
+  "total_participants": 215,
+  "timeout_defaults": 0 // votes that defaulted to hotseat
+}
+
+--------------------------------------------------------------------------------
+
+7. Best Rider Votes Collection
+-------------------------------
+{
+  "_id": ObjectId("best_rider_vote_id"),
+  "event_id": ObjectId("event_id"),
+  "class_id": ObjectId("class_id"),
+  "heat": 1,
+  
+  "status": "closed", // open | closed
+  
+  "votes": {
+    "rider1_id": 150,
+    "rider2_id": 120,
+    "rider3_id": 80
+  },
+  
+  "winner_rider_id": ObjectId("rider1_id"),
+  
+  "opened_at": ISODate("2026-02-15T13:00:00Z"),
+  "closed_at": ISODate("2026-02-15T13:00:45Z")
+}
+
+--------------------------------------------------------------------------------
+
+8. Heats Collection (Optional - for heat-level tracking)
+---------------------------------------------------------
+{
+  "_id": ObjectId("heat_id"),
+  "event_id": ObjectId("event_id"),
+  "class_id": ObjectId("class_id"),
+  "heat_number": 1,
+  
+  "status": "open", // open | closed
+  
+  "current_hotseat_id": ObjectId("overtake_id"),
+  "winning_overtake_id": null, // Set when heat closes
+  
+  "total_matches": 5,
+  "total_overtakes_created": 8,
+  
+  "started_at": ISODate("2026-02-15T12:00:00Z"),
+  "closed_at": null
+}
+
+================================================================================
+CORE BUSINESS LOGIC
+================================================================================
+
+Overtake Match Flow
+-------------------
+1. Admin creates overtakes in real-time → status: pending
+2. FIRST MATCH: Admin selects initial hotseat from pending overtakes
+3. Admin selects challenger from remaining pending overtakes
+4. Admin clicks "Start Match"
+5. Both overtakes get status active_hotseat / active_challenger
+6. 30-second timer starts for fans
+7. Fans vote (or hotseat wins by timeout)
+8. Match completes:
+   - Winner: status → active_hotseat (ready for next match)
+   - Loser: status → eliminated
+   - Vote counts stored in Matches collection
+9. Admin selects next challenger, repeat from step 3
+10. When admin closes heat: current hotseat status → winner
+
+--------------------------------------------------------------------------------
+
+Session Management
+------------------
+- One session per fan per login
+- Session persists until fan leaves or closes browser
+- Session token prevents:
+  - Voting twice in same match
+  - Voting twice in same Best Rider vote
+- Session does NOT prevent voting in multiple matches (they should vote in 
+  all matches)
+
+--------------------------------------------------------------------------------
+
+Default Vote Behavior
+---------------------
+- If fan doesn't vote within 30 seconds → automatic vote for HOTSEAT
+- This maintains match progression without admin intervention
+- Tracked separately in timeout_defaults field
+
+--------------------------------------------------------------------------------
+
+Best Rider Voting
+-----------------
+- Independent from overtake voting
+- Can run before, during, or after overtake matches
+- One vote per heat per session
+- Admin controls when voting opens
+- Auto-closes after 45 seconds
+
+================================================================================
+VALIDATION RULES
+================================================================================
+
+Overtake Creation
+-----------------
+✓ Overtaker ≠ Overtaken
+✓ Both riders must be assigned to the selected event + class
+✓ Description required (min 10 characters)
+✓ Event, class, heat must be selected
+
+Match Creation
+--------------
+✓ Cannot start new match while another is active in same heat
+✓ Hotseat must have status active_hotseat or pending
+✓ Challenger must have status pending
+✓ Hotseat ≠ Challenger
+
+Fan Voting
+----------
+✓ Session must exist and be valid
+✓ Cannot vote in same match twice
+✓ Must vote within 30 seconds (or timeout default applies)
+✓ Cannot vote in closed heat
+
+Heat Closure
+------------
+✓ No active match can be running
+✓ At least one match must have been completed
+✓ Once closed, heat cannot be reopened
+
+================================================================================
+API ENDPOINTS (Suggested Structure)
+================================================================================
+
+Admin Endpoints
+---------------
+POST   /api/admin/login
+GET    /api/admin/riders
+POST   /api/admin/riders
+PUT    /api/admin/riders/:id
+DELETE /api/admin/riders/:id
+
+GET    /api/admin/classes
+POST   /api/admin/classes
+PUT    /api/admin/classes/:id
+DELETE /api/admin/classes/:id
+
+GET    /api/admin/events
+POST   /api/admin/events
+PUT    /api/admin/events/:id
+DELETE /api/admin/events/:id
+
+POST   /api/admin/overtakes
+GET    /api/admin/overtakes?event_id&class_id&heat
+
+POST   /api/admin/matches/start
+POST   /api/admin/matches/end
+GET    /api/admin/matches/history?event_id&class_id&heat
+
+POST   /api/admin/heats/close
+GET    /api/admin/heats/status
+
+POST   /api/admin/best-rider-vote/open
+GET    /api/admin/best-rider-vote/results
+
+Fan Endpoints
+-------------
+POST   /api/fans/login
+GET    /api/fans/current-match
+POST   /api/fans/vote/overtake
+POST   /api/fans/vote/rider
+GET    /api/fans/results/overtake
+GET    /api/fans/results/rider
+
+================================================================================
+CRITICAL NOTES
+================================================================================
+
+1. Real-Time Requirements
+-------------------------
+System must support WebSocket or SSE for:
+- Live match updates to fans
+- Live vote counts to admin
+- Match timer synchronization
+
+2. Scalability Considerations
+------------------------------
+- Expect 1000+ concurrent fan sessions during live events
+- Vote writes must be fast (< 100ms response time)
+- Consider Redis for session management and live vote counting
+
+3. Data Integrity
+-----------------
+- Use transactions for match completion (update winner, loser, match record)
+- Index on session_id, event_id, class_id, heat for fast lookups
+- Archive old events to separate collection after completion
+
+4. Admin UX
+-----------
+- Auto-refresh pending overtakes list as new ones are created
+- Confirm before closing heat (irreversible action)
+- Show warnings if trying to start match while one is active
+
+5. Fan UX
+---------
+- Clear visual countdown timer
+- Disable vote buttons after voting
+- Show "Match Starting Soon" between matches
+- Graceful handling of network disconnections
+
+================================================================================
+FUTURE ENHANCEMENTS (Out of Scope for V1)
+================================================================================
+
+- Multi-language support
+- Fan leaderboards (most votes cast)
+- Replay match highlights
+- Social media sharing of results
+- Mobile app (native iOS/Android)
+- SMS voting option
+- Advanced analytics dashboard
+- Sponsor integration zones
+- Live streaming integration
+
+================================================================================
+END OF SPECIFICATION
+================================================================================

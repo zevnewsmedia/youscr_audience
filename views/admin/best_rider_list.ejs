@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🏁 Best Rider Contests</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { padding: 6px; border: 1px solid #ccc; text-align: left; }
+        tr.deleted { opacity: 0.5; background-color: #f9f9f9; }
+        span.deleted-label { color: red; font-weight: bold; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <%- include("../partials/admin_menu") %>
+    <h1>🏁 Best Rider Contests</h1>
+
+    <form method="GET" action="/admin/best-rider/list">
+        <label>Filter by Event:</label>
+        <select name="event_id" onchange="this.form.submit()">
+            <option value="">-- All Events --</option>
+            <% if(events) { %>
+                <% events.forEach(event => { %>
+                    <option value="<%= event._id %>" <%= event_id && event._id.toString() === event_id.toString() ? "selected" : "" %>>
+                        <%= event.name %>
+                    </option>
+                <% }) %>
+            <% } %>
+        </select>
+    </form>
+
+    <br>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Event</th>
+                <th>Class</th>
+                <th>Heat</th>
+                <th>Rider</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% contests.forEach(c => { %>
+                <tr class="<%= c.deleted ? 'deleted' : '' %>">
+                    <td>
+                        <% const event = events.find(e => e._id.toString() === c.event_id.toString()); %>
+                        <%= event ? event.name : "—" %>
+                    </td>
+                    <td><%= c.class_id %></td>
+                    <td><%= c.heat %></td>
+                    <td>
+                        <% if (c.rider_name) { %>
+                            <%= c.rider_name %> <%= c.rider_surname %>
+                        <% } else { %>
+                            <em style="color: #999;">Unknown Rider</em>
+                        <% } %>
+                        
+                        <% if(c.deleted) { %>
+                            <span class="deleted-label">(Deleted)</span>
+                        <% } %>
+                    </td>
+                    <td><%= c.status %></td>
+                    <td>
+                        <% if(c.deleted) { %>
+                            <form method="POST" action="/admin/best-rider/<%= c._id %>/restore" style="display:inline;">
+                                <button type="submit">Restore</button>
+                            </form>
+                        <% } else { %>
+                            <a href="/admin/best-rider/edit/<%= c._id %>">Edit</a>
+                            <form method="POST" action="/admin/best-rider/<%= c._id %>/delete" style="display:inline;">
+                                <button type="submit" onclick="return confirm('Delete this entry?')">Delete</button>
+                            </form>
+                        <% } %>
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</body>
+</html>

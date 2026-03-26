@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouSCR Admin | Best Trick Standings</title>
+</head>
+<body>
+    <h1>Best Trick Standings (Admin View)</h1>
+    <%- include("../partials/admin_menu") %>
+
+    <hr>
+
+    <div>
+        <form method="GET" action="/admin/results/best-trick">
+            <label>Event:</label>
+            <select name="event_id" onchange="this.form.submit()">
+                <option value="">-- Choose an Event --</option>
+                <% events.forEach(event => { %>
+                    <option value="<%= event._id %>" <%= event_id == event._id ? 'selected' : '' %>>
+                        <%= event.name %>
+                    </option>
+                <% }) %>
+            </select>
+
+            <label>Heat:</label>
+            <input type="number" name="heat" value="<%= current_heat %>" onchange="this.form.submit()">
+        </form>
+    </div>
+
+    <br>
+
+    <% if (event_id) { %>
+        <div>
+            <% if (typeof status !== 'undefined' && status === 'broadcast_success') { %>
+                <p>✅ Standings pushed to fans successfully!</p>
+            <% } %>
+            
+            <% if (typeof status !== 'undefined' && status === 'champion_set') { %>
+                <p>🏆 Champion recorded and announced!</p>
+            <% } %>
+
+            <% if (typeof status !== 'undefined' && status === 'already_set') { %>
+                <p>⚠️ A champion has already been set for this event.</p>
+            <% } %>
+            
+            <form action="/admin/broadcast-standings" method="POST">
+                <input type="hidden" name="event_id" value="<%= event_id %>">
+                <input type="hidden" name="heat" value="<%= current_heat %>">
+                <p>Ready to show the leaderboard to the fans?</p>
+                <button type="submit">
+                    PUSH LEADERBOARD TO FANS
+                </button>
+            </form>
+        </div>
+    <% } %>
+
+    <br>
+
+    <% if (!event_id) { %>
+        <p>Please select an event to view the live standings.</p>
+    <% } else if (results.length === 0) { %>
+        <p>No votes found for Heat <%= current_heat %>.</p>
+    <% } else { %>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Rider</th>
+                    <th>Trick</th>
+                    <th>Total Votes</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% results.forEach((row, index) => { %>
+                    <tr>
+                        <td>#<%= index + 1 %></td>
+                        <td>
+                            <%= row.rider %>
+                            <% if (typeof currentEvent !== 'undefined' && currentEvent && currentEvent.champion_rider_id && currentEvent.champion_rider_id.toString() === row.rider_id.toString()) { %>
+                                <strong>(🏆 CHAMPION)</strong>
+                            <% } %>
+                        </td>
+                        <td><%= row.trick %></td>
+                        <td><%= row.voteCount %></td>
+                        <td>
+                            <form action="/admin/results/set-champion" method="POST" onsubmit="return confirm('Confirm winner?')">
+                                <input type="hidden" name="event_id" value="<%= event_id %>">
+                                <input type="hidden" name="rider_id" value="<%= row.rider_id %>">
+                                <input type="hidden" name="heat" value="<%= current_heat %>">
+                                <button type="submit">Set Champion</button>
+                            </form>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    <% } %>
+
+    <p>
+        <a href="/admin/best-trick?event_id=<%= event_id %>&heat=<%= current_heat %>">
+            ← Back to Control Panel
+        </a>
+    </p>
+</body>
+</html>

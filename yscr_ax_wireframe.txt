@@ -1,0 +1,159 @@
+=====================================================
+UPDATED WIREFRAME — ADMIN & FAN VOTING INDEPENDENT
+(WITH FAN-ONLY SUDDEN DEATH)
+=====================================================
+
+CORE RULE (VISIBLE IN SYSTEM, NOT UI)
+------------------------------------
+- Fans and Admins vote independently
+- No weighting, no merging, no override
+- Same matches, separate outcomes
+- Fan ties are resolved ONLY by fans (Sudden Death)
+- Admins never resolve fan ties
+
+=====================================================
+FANS INTERFACE
+=====================================================
+
+SCREEN 1: Fan Login
+----------------------------------------------------
+|              Welcome to Racing Votes             |
+|--------------------------------------------------|
+| Name:  _________________________                 |
+| Email: _________________________                 |
+|                                                  |
+|                 [ Start Voting ]                |
+----------------------------------------------------
+Notes:
+- Generates unique session token
+- Prevents duplicate fan votes
+- Session persists across all matches in the same heat
+- Active Event, Class, and Heat are auto-assigned
+- Fans have NO control over match selection
+
+----------------------------------------------------
+SCREEN 2: Best Overtake Voting (Fan – Live)
+----------------------------------------------------
+|             Best Overtake Voting                |
+| Event: Dakar Rally | Class 450 | Heat 1         |
+| Progress: Match 3 of 12                         |
+| Timer: 00:30                                   |
+|--------------------------------------------------|
+|                     HOTSEAT                     |
+| Rider A → Rider B                               |
+| Description: Pass on turn 3                     |
+|--------------------------------------------------|
+|                   CHALLENGER                    |
+| Rider C → Rider D                               |
+| Description: Pass on final straight             |
+|--------------------------------------------------|
+|        [ Vote HOTSEAT ]  [ Vote CHALLENGER ]     |
+----------------------------------------------------
+Notes:
+- Fan-only vote
+- One vote per match per session
+- No abstention
+- No replay
+- Timeout (30s) → HOTSEAT wins (fan logic only)
+- Match order fully controlled by admin
+- Fans cannot see admin votes
+
+----------------------------------------------------
+SCREEN 2A: Sudden Death Voting (Fan – Tie Only)
+----------------------------------------------------
+|              ⚠ SUDDEN DEATH ⚠                  |
+| Event: Dakar Rally | Class 450 | Heat 1         |
+| Match: 3 of 12                                 |
+| Timer: 00:15                                   |
+|--------------------------------------------------|
+|                     HOTSEAT                     |
+| Rider A → Rider B                               |
+| Description: Pass on turn 3                     |
+|--------------------------------------------------|
+|                   CHALLENGER                    |
+| Rider C → Rider D                               |
+| Description: Pass on final straight             |
+|--------------------------------------------------|
+|        [ Vote HOTSEAT ]  [ Vote CHALLENGER ]     |
+----------------------------------------------------
+Notes:
+- Triggered ONLY if Screen 2 ends in a tie
+- Same sessions that voted in the original match are eligible
+- Maximum of 3 Sudden Death rounds
+- Timer per round: 15 seconds
+- One additional vote per session per round
+- No new voters allowed
+- Timeout → vote not counted (no default winner)
+- Resolution:
+   1. First side to reach strict majority (>50%) wins
+   2. If no majority after 3 rounds → match declared FAN TIE
+- Admins are NOT notified and cannot intervene
+
+----------------------------------------------------
+SCREEN 3: Best Overtake Result (Fan)
+----------------------------------------------------
+|             Overtake of the Heat                |
+|--------------------------------------------------|
+| Label: Audience Choice                          |
+| Event: Dakar Rally | Class 450 | Heat 1         |
+| Winner: Rider A                                 |
+| Overtake: Rider A → Rider B                     |
+| Description: Pass on turn 3                     |
+| Matches Faced: 5                                |
+| Total Fan Votes: 123                            |
+----------------------------------------------------
+Alternate States:
+- Label: Audience Choice — Tie
+- Winner: Undecided by Fans
+
+Notes:
+- Displays FAN RESULT ONLY
+- Admin/Jury result is never shown here
+
+----------------------------------------------------
+SCREEN 4: Best Rider Voting (Fan)
+----------------------------------------------------
+|         Vote for Best Rider (Audience)          |
+| Event: Dakar Rally | Class 450 | Heat 1         |
+| Timer: 00:45                                   |
+|--------------------------------------------------|
+| ( ) Rider 1                                    |
+| ( ) Rider 2                                    |
+| ( ) Rider 3                                    |
+|--------------------------------------------------|
+|                 [ Submit Vote ]                |
+----------------------------------------------------
+Notes:
+- Independent from overtakes
+- One vote per session
+- Stored immediately
+- No admin influence
+
+Result Label:
+- Fan Best Rider
+
+=====================================================
+ADMINS INTERFACE
+=====================================================
+
+(no changes — admin flow remains identical)
+
+----------------------------------------------------
+SCREEN 6: Match Control (Admin)
+----------------------------------------------------
+|             Match Control Panel                |
+|--------------------------------------------------|
+| Current HOTSEAT: Overtake #5                   |
+| Next CHALLENGER: Overtake #6                  |
+|--------------------------------------------------|
+| [ Release Match to Fans ]                     |
+----------------------------------------------------
+Notes:
+- Admin controls sequencing only
+- Admin cannot see Sudden Death
+- Admin cannot resolve fan ties
+
+=====================================================
+END OF UPDATED WIREFRAME
+=====================================================
+

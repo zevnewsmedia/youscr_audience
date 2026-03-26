@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Admin – Create Rider</title>
+</head>
+<body>
+<%- include("partials/admin_menu") %>
+
+<h1>🏍️ Create Rider</h1>
+
+<% if (error) { %>
+  <p style="color:red;"><%= error %></p>
+<% } %>
+
+<% if (success) { %>
+  <p style="color:green;"><%= success %></p>
+<% } %>
+
+<form method="POST" action="/admin/riders/new">
+
+  <% if (rider.rider_id) { %>
+    <label>Rider ID</label><br>
+    <input
+      type="text"
+      value="<%= rider.rider_id %>"
+      readonly
+      style="background:#eee;"
+    >
+    <br><br>
+  <% } %>
+
+  <label>Name</label><br>
+  <input
+    type="text"
+    name="name"
+    value="<%= rider.name || "" %>"
+    required
+  >
+  <br><br>
+
+  <label>Surname</label><br>
+  <input
+    type="text"
+    name="surname"
+    value="<%= rider.surname || "" %>"
+    required
+  >
+  <br><br>
+
+  <label>Team</label><br>
+  <input
+    type="text"
+    name="team"
+    value="<%= rider.team || "" %>"
+  >
+  <br><br>
+
+  <label>Bio</label><br>
+  <textarea
+    name="bio"
+    rows="4"
+    cols="40"
+  ><%= rider.bio || "" %></textarea>
+  <br><br>
+
+  <label>Photo URL</label><br>
+  <input
+    type="text"
+    name="photo"
+    value="<%= rider.photo || "" %>"
+  >
+  <br><br>
+
+  <button type="submit">Create Rider</button>
+
+</form>
+
+</body>
+</html>
+

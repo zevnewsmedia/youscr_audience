@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Add Contestant - Best Rider of the Heat</title>
+</head>
+<body>
+<%- include("../partials/admin_menu") %>
+
+<h1>Add Contestant - Best Rider of the Heat</h1>
+
+<form method="POST" action="/admin/best-rider/new">
+  <table border="0" cellpadding="5">
+    <tr>
+      <td><label for="event_id">Event</label></td>
+      <td>
+        <select id="event_id" name="event_id" required>
+          <option value="">-- Select Event --</option>
+          <% events.forEach(e => { %>
+            <option value="<%= e._id %>"><%= e.name %></option>
+          <% }) %>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td><label for="class_id">Class</label></td>
+      <td>
+        <select id="class_id" name="class_id" required>
+          <option value="">-- Select Class --</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c._id %>"><%= c.name %></option>
+          <% }) %>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td><label for="heat">Heat</label></td>
+      <td><input id="heat" type="number" name="heat" min="1" required placeholder="e.g. 1"></td>
+    </tr>
+    <tr>
+      <td><label for="rider_id">Rider</label></td>
+      <td>
+        <select id="rider_id" name="rider_id" required disabled>
+          <option value="">-- Select Event and Class first --</option>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><button type="submit">Add Contestant</button></td>
+    </tr>
+  </table>
+</form>
+
+<hr>
+
+<h2>Current Contestants (Live Preview)</h2>
+<div id="live-table-container">
+  <i>Select an event and class to view existing entries.</i>
+</div>
+
+<script>
+const eventSelect = document.getElementById('event_id');
+const classSelect = document.getElementById('class_id');
+const riderSelect = document.getElementById('rider_id');
+const tableContainer = document.getElementById('live-table-container');
+
+/**
+ * Logic to fetch the table from your existing route 
+ * without changing the backend.
+ */
+async function syncLiveTable() {
+  const eID = eventSelect.value;
+  const cID = classSelect.value;
+
+  if (!eID) {
+    tableContainer.innerHTML = '<i>Select an event to see the list.</i>';
+    return;
+  }
+
+  try {
+    // 1. Fetch from your existing route (which returns a FULL page)
+    const response = await fetch(`/admin/best-riders/competing-list?event_id=${eID}&class_id=${cID}`);
+    const fullHtml = await response.text();
+
+    // 2. Parse the string into a temporary HTML document
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(fullHtml, 'text/html');
+
+    // 3. Find the table inside that full page
+    const incomingTable = doc.querySelector('table');
+
+    if (incomingTable) {
+      // 4. Inject ONLY the table into our div
+      tableContainer.innerHTML = incomingTable.outerHTML;
+    } else {
+      tableContainer.innerHTML = '<i>No contestants found for this selection.</i>';
+    }
+  } catch (err) {
+    console.error("Live table sync failed:", err);
+    tableContainer.innerHTML = '<b>Error loading live preview.</b>';
+  }
+}
+
+/**
+ * Logic to update the Rider dropdown
+ */
+async function updateRiderDropdown() {
+  const eID = eventSelect.value;
+  const cID = classSelect.value;
+
+  if (!eID || !cID) {
+    riderSelect.innerHTML = '<option value="">-- Select Event and Class first --</option>';
+    riderSelect.disabled = true;
+    return;
+  }
+
+  riderSelect.innerHTML = '<option value="">Loading...</option>';
+  
+  try {
+    const res = await fetch(`/api/riders-by-event-class?event_id=${eID}&class_id=${cID}`);
+    const riders = await res.json();
+
+    if (riders.length === 0) {
+      riderSelect.innerHTML = '<option value="">No riders found</option>';
+      riderSelect.disabled = true;
+      return;
+    }
+
+    riderSelect.innerHTML = '<option value="">-- Select Rider --</option>';
+    riders.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r._id;
+      opt.textContent = `${r.name} ${r.surname}`;
+      riderSelect.appendChild(opt);
+    });
+    riderSelect.disabled = false;
+  } catch (err) {
+    riderSelect.innerHTML = '<option value="">Error loading riders</option>';
+  }
+}
+
+// Attach listeners to update both the dropdown AND the live table
+eventSelect.addEventListener("change", () => {
+  updateRiderDropdown();
+  syncLiveTable();
+});
+
+classSelect.addEventListener("change", () => {
+  updateRiderDropdown();
+  syncLiveTable();
+});
+</script>
+
+
+<script>
+// This function is triggered by the button in the table above
+async function deleteEntry(id) {
+  // 1. Confirm with the admin
+  if (!confirm("Are you sure you want to remove this rider?")) return;
+
+  try {
+    // 2. Call your POST route
+    const response = await fetch(`/admin/best-rider/${id}/delete`, {
+      method: 'POST'
+    });
+
+    if (response.ok) {
+      // 3. Success! Now tell the page to refresh the table 
+      // by calling your existing sync function
+      syncLiveTable(); 
+    } else {
+      alert("Server error: Could not delete.");
+    }
+  } catch (err) {
+    console.error("Delete failed:", err);
+    alert("Connection error.");
+  }
+}
+</script>
+</body>
+</html>

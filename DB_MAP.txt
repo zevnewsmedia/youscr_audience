@@ -1,0 +1,173 @@
+COLLECTIONS → ROUTES
+================================================================================
+
+[ COLLECTION: events ]
+  Racing events (e.g. a race day/round). Created, edited, soft-deleted/restored
+  by admin. Used as context for almost everything else.
+
+  GET  /admin/events/list
+  POST /admin/events/new
+  GET  /admin/events/edit/:id
+  POST /admin/events/edit/:id
+  POST /admin/events/:id/delete
+  POST /admin/events/:id/restore
+  GET  /admin/event-riders
+  GET  /admin/overtake/new
+  GET  /admin/matches/new
+  GET  /admin/matches/new-v2
+  GET  /admin/matches/results
+  GET  /admin/best-rider/new
+  GET  /admin/best-rider/list
+  GET  /admin/best-rider/edit/:id
+  GET  /admin/best-rider/match
+  GET  /admin/best-rider/results
+  POST /fan/login
+  GET  /matches
+
+[ COLLECTION: classes ]
+  Rider categories/classes (e.g. MX1, MX2). Read-only from routes — likely
+  seeded/managed outside the app. Used as filters when setting up overtakes,
+  matches, and best rider contests.
+
+  GET  /admin/event-riders
+  GET  /admin/event-riders/:id/list
+  GET  /admin/overtake/new
+  GET  /admin/overtake/edit/:id
+  GET  /admin/overtakes/by-event/:id
+  GET  /admin/matches/new
+  GET  /admin/matches/new-v2
+  GET  /admin/matches/edit/:id
+  GET  /admin/best-rider/new
+  GET  /admin/best-rider/edit/:id
+
+[ COLLECTION: riders ]
+  Rider profiles. Full CRUD with soft-delete. Referenced across overtakes,
+  matches, and best rider.
+
+  GET  /admin/riders/list
+  POST /admin/riders/new
+  GET  /admin/riders/edit/:id
+  POST /admin/riders/edit/:id
+  POST /admin/riders/delete/:id
+  POST /admin/riders/restore/:id
+  GET  /admin/event-riders
+  GET  /admin/overtake/new
+  GET  /admin/overtake/edit/:id
+  GET  /admin/overtakes/by-event/:id
+  GET  /admin/matches/new
+  GET  /admin/matches/new-v2
+  GET  /admin/matches/edit/:id
+  POST /admin/matches/new
+  POST /admin/matches/:id/champion
+  GET  /admin/matches/results
+  GET  /admin/best-rider/new
+  GET  /admin/best-rider/edit/:id
+  GET  /fan/matches
+  GET  /matches
+
+[ COLLECTION: event_riders ]
+  Junction table linking riders to a specific event. Controls which riders
+  are eligible for a given event.
+
+  GET  /admin/event-riders/:id/list
+  POST /admin/event-riders/:id/add
+  POST /admin/event-riders/:id/remove/:id
+
+[ COLLECTION: overtakes ]
+  Individual overtake moments recorded per event. Full CRUD with soft-delete.
+  The raw data that feeds into matches.
+
+  POST /admin/overtake/new
+  GET  /admin/overtake/edit/:id
+  POST /admin/overtake/edit/:id
+  POST /admin/overtake/:id/delete
+  POST /admin/overtake/:id/restore
+  GET  /admin/overtakes/by-event/:id
+  GET  /admin/matches/new
+  GET  /admin/matches/new-v2
+  GET  /admin/matches/edit/:id
+  POST /admin/matches/new
+  POST /admin/matches/:id/champion
+  GET  /admin/matches/results
+  GET  /fan/matches
+  GET  /matches
+
+[ COLLECTION: matches ]
+  Head-to-head voting matchups between overtakes. Built from overtakes, has
+  lifecycle states (created → finalized → champion set). Soft-deletable.
+
+  GET  /admin/matches/new
+  GET  /admin/matches/new-v2
+  POST /admin/matches/new
+  GET  /admin/matches/edit/:id
+  POST /admin/matches/update/:id
+  POST /admin/matches/:id/delete
+  POST /admin/matches/:id/restore
+  POST /admin/matches/:id/finalize
+  POST /admin/matches/:id/champion
+  GET  /admin/matches/results
+  POST /admin/events/:id/delete
+  POST /admin/events/:id/restore
+  POST /admin/riders/delete/:id
+  POST /admin/riders/restore/:id
+  GET  /fan/matches
+  GET  /matches
+
+[ COLLECTION: matches_results ]
+  Aggregated/computed results of finalized matches. Written when a match is
+  finalized or a champion is set. Read by results views.
+
+  GET  /admin/matches/new
+  GET  /admin/matches/new-v2
+  POST /admin/matches/:id/finalize
+  POST /admin/matches/:id/champion
+  GET  /admin/matches/results
+  GET  /matches
+
+[ COLLECTION: votes ]
+  Fan votes cast on overtake matches. Written by POST /fan/vote, read during
+  finalization and results.
+
+  POST /fan/vote
+  GET  /fan/matches
+  POST /admin/matches/:id/finalize
+  GET  /admin/matches/results
+
+[ COLLECTION: fans ]
+  Fan identity records. Created on login.
+
+  POST /fan/login
+
+[ COLLECTION: fan_sessions ]
+  Active fan sessions. Created on login, used to authenticate fan actions
+  like voting and viewing matches.
+
+  POST /fan/login
+  GET  /fan/matches
+  GET  /fan/best-rider
+  POST /fan/best-rider/vote
+
+[ COLLECTION: best_rider_contests ]
+  Admin-created contests for voting on the best rider of an event. Full CRUD
+  with soft-delete, champion can be set/unset.
+
+  POST /admin/best-rider/new
+  GET  /admin/best-rider/list
+  GET  /admin/best-rider/edit/:id
+  POST /admin/best-rider/edit/:id
+  POST /admin/best-rider/:id/delete
+  POST /admin/best-rider/:id/restore
+  GET  /admin/best-rider/match
+  GET  /admin/best-rider/results
+  POST /admin/best-rider/set-champion
+  POST /admin/best-rider/unset-champion
+
+[ COLLECTION: best_rider_votes ]
+  Fan votes cast within a best rider contest. Used to determine and set
+  the champion.
+
+  POST /fan/best-rider/vote
+  GET  /admin/best-rider/results
+  POST /admin/best-rider/set-champion
+
+================================================================================

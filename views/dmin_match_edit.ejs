@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Match</title>
+</head>
+<body>
+
+<h1>✏️ Edit Match</h1>
+
+<form method="POST" action="/admin/matches/update/<%= match._id %>">
+  <input type="hidden" name="event_id" value="<%= match.event_id %>">
+
+  <label>Hotseat Overtake:</label><br>
+  <select name="hotseat_overtake_id" required>
+    <% overtakes.forEach(o => { %>
+      <option
+        value="<%= o._id %>"
+        <%= o._id.toString() === match.hotseat_overtake_id.toString() ? "selected" : "" %>>
+        Heat <%= o.heat %> – <%= o.description %>
+      </option>
+    <% }) %>
+  </select><br><br>
+
+  <label>Challenger Overtake:</label><br>
+  <select name="challenger_overtake_id" required>
+    <% overtakes.forEach(o => { %>
+      <option
+        value="<%= o._id %>"
+        <%= o._id.toString() === match.challenger_overtake_id.toString() ? "selected" : "" %>>
+        Heat <%= o.heat %> – <%= o.description %>
+      </option>
+    <% }) %>
+  </select><br><br>
+
+  <label>Round (optional):</label><br>
+  <input type="text" name="round" value="<%= match.round || "" %>"><br><br>
+
+  <button type="submit">💾 Update Match</button>
+  <a href="/admin/matches/new?event_id=<%= match.event_id %>">Cancel</a>
+</form>
+
+</body>
+</html>
+

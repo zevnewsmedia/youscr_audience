@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Overtake</title>
+</head>
+<body>
+
+  <h1>✏️ Edit Overtake</h1>
+
+  <% if (error) { %>
+    <p style="color:red;"><%= error %></p>
+  <% } %>
+
+  <form action="/admin/overtake/<%= overtake._id %>/update-full" method="POST">
+
+    <p>
+      <strong>Event:</strong> <%= event.name %><br>
+      <strong>Class:</strong> <%= classObj.name %><br>
+      <strong>Heat:</strong> <%= overtake.heat %>
+    </p>
+
+    <hr>
+
+    <label for="overtaker_id">Overtaker:</label><br>
+    <select id="overtaker_id" name="overtaker_id" required>
+      <% riders.forEach(rider => { %>
+        <option value="<%= rider._id %>" 
+          <%= rider._id.toString() === overtake.overtaker_id.toString() ? 'selected' : '' %>>
+          <%= rider.name %> <%= rider.surname %>
+        </option>
+      <% }) %>
+    </select><br><br>
+
+    <label for="overtaken_id">Overtaken:</label><br>
+    <select id="overtaken_id" name="overtaken_id" required>
+      <% riders.forEach(rider => { %>
+        <option value="<%= rider._id %>" 
+          <%= rider._id.toString() === overtake.overtaken_id.toString() ? 'selected' : '' %>>
+          <%= rider.name %> <%= rider.surname %>
+        </option>
+      <% }) %>
+    </select><br><br>
+
+    <label for="description">Description:</label><br>
+    <input
+      type="text"
+      id="description"
+      name="description"
+      value="<%= overtake.description %>"
+      required
+    ><br><br>
+
+    <label for="status">Status:</label><br>
+    <select id="status" name="status">
+      <option value="available"  <%= overtake.status === 'available' ? 'selected' : '' %>>Available</option>
+      <option value="hotseat"    <%= overtake.status === 'hotseat' ? 'selected' : '' %>>Hotseat</option>
+      <option value="eliminated" <%= overtake.status === 'eliminated' ? 'selected' : '' %>>Eliminated</option>
+      <option value="winner"     <%= overtake.status === 'winner' ? 'selected' : '' %>>Winner</option>
+    </select><br><br>
+
+    <button type="submit">Save Changes</button>
+    <a href="/admin/overtake/new">Cancel</a>
+
+  </form>
+
+</body>
+</html>
+

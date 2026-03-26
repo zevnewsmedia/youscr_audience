@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin - Events</title>
+</head>
+<body>
+<h1>Events (Admin)</h1>
+<%- include("partials/admin_menu") %>
+
+<p><a href="/admin/events/new">+ Create New Event</a></p>
+
+<% if (!events || events.length === 0) { %>
+  <p>No events found.</p>
+<% } else { %>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Location</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% events.forEach((event, index) => { %>
+        <tr>
+          <td><%= index + 1 %></td>
+          <td><%= event.name %></td>
+          <td><%= event.location %></td>
+          <td><%= event.date ? new Date(event.date).toISOString().split("T")[0] : "—" %></td>
+          <td><%= event.deleted ? "Inactive" : "Active" %></td>
+          <td>
+            <a href="/admin/events/edit/<%= event._id %>">Edit</a>
+            &nbsp;|&nbsp;
+            <% if (event.deleted) { %>
+              <form method="POST" action="/admin/events/<%= event._id %>/restore" style="display:inline">
+                <button type="submit">Restore</button>
+              </form>
+            <% } else { %>
+              <form method="POST" action="/admin/events/<%= event._id %>/delete" style="display:inline"
+                onsubmit="return confirm('Soft delete this event?');">
+                <button type="submit">Delete</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+
+</body>
+</html>

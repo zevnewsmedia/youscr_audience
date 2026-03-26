@@ -1,0 +1,465 @@
+========================================================
+SYSTEM SPECIFICATION — FULL
+(FAN & ADMIN VOTING — STRICTLY INDEPENDENT)
+========================================================
+
+CORE PRINCIPLE
+--------------
+Fan voting and Admin (jury) voting are COMPLETELY INDEPENDENT.
+
+- No merging of votes
+- No weighting between systems
+- No tie-breaking across systems
+- No overrides
+- No shared computation
+- No authority resolving fan outcomes
+
+Fans and Admins evaluate the same overtakes in parallel
+and may legitimately produce different results.
+
+- Fan ties are resolved ONLY by fans via Sudden Death
+- Admins never resolve fan ties
+
+
+========================================================
+FANS INTERFACE
+========================================================
+
+--------------------------------------------------------
+Screen 1: Fan Login
+--------------------------------------------------------
+Purpose:
+Create a controlled fan voting session.
+
+UI
+- Name
+- Email
+- Start Voting
+
+Behavior
+- Generates a unique session token
+- Session token:
+  - Prevents duplicate votes
+  - Persists across all matches within the same heat
+- Active event, class, and heat are auto-assigned
+- Fans NEVER choose riders, overtakes, or matchups
+
+
+--------------------------------------------------------
+Screen 2: Best Overtake Voting (Fan)
+--------------------------------------------------------
+Purpose:
+Fan-only decision on a head-to-head overtake match.
+
+Context (read-only)
+- Event
+- Class
+- Heat
+- Progress: Match X of Y
+
+Match Structure
+- HOTSEAT
+  - Overtaker → Overtaken
+  - Description (admin-defined)
+- CHALLENGER
+  - Overtaker → Overtaken
+  - Description (admin-defined)
+
+Controls
+- Vote HOTSEAT
+- Vote CHALLENGER
+
+Voting Rules
+- Timer: 30 seconds
+- One vote per match per session
+- No abstention
+- No replay
+- Timeout → HOTSEAT wins by default (fan logic only)
+
+Data Collected
+- Selected side
+- Response time (ms)
+- Timestamp
+- Device
+- Browser
+- Carrier
+
+Linking
+- event_id
+- class_id
+- heat
+- match_id
+- session_id
+
+
+--------------------------------------------------------
+Screen 2A: Sudden Death Voting (Fan)
+--------------------------------------------------------
+Purpose:
+Resolve tied fan matches using fan behavior ONLY.
+
+Trigger Condition
+- HOTSEAT votes == CHALLENGER votes
+  at the end of regular voting
+
+Label
+- Sudden Death
+
+Context (read-only)
+- Event
+- Class
+- Heat
+- Match ID
+
+Match Structure
+- SAME HOTSEAT overtake
+- SAME CHALLENGER overtake
+
+Sudden Death Rules
+------------------
+Eligibility
+- Only fan sessions that voted in the original match
+
+Format
+- Maximum of 3 Sudden Death rounds
+- Timer per round: 15 seconds
+- One vote per session per round
+- No abstention
+- No replay
+- No new voters
+- Live vote counts hidden
+
+Timeout
+- No vote recorded
+- No default winner
+
+Resolution Logic
+----------------
+1. During any Sudden Death round:
+   - If one side reaches a strict majority (>50% of eligible voters)
+     → Voting locks immediately
+     → Winner declared
+
+2. If no majority:
+   - Advance to next Sudden Death round (max 3)
+
+3. After 3 rounds:
+   - If still tied
+     → Match declared FAN TIE
+     → No forced winner
+
+Important
+- No admin intervention
+- No head judge logic
+- No external tie-breakers
+
+
+--------------------------------------------------------
+Screen 3: Fan Best Overtake Result
+--------------------------------------------------------
+Purpose:
+Display FAN outcome only.
+
+Displayed
+- Winning Overtake OR Tie
+- Overtaker
+- Overtaken
+- Description
+- Event / Class / Heat
+- Total fan votes
+- Matches faced
+
+Labels
+- Audience Choice
+- Audience Choice — Tie
+- Undecided by Fans
+
+
+--------------------------------------------------------
+Screen 4: Best Rider Voting (Fan)
+--------------------------------------------------------
+Purpose:
+Independent fan popularity vote.
+
+UI
+- Timer: 45 seconds
+- Riders (from Event → Class assignment)
+
+Rules
+- One vote per session
+- Stored immediately
+- No admin influence
+
+Result
+- Fan Best Rider
+
+
+========================================================
+ADMINS INTERFACE
+========================================================
+
+--------------------------------------------------------
+Screen 1: Admin Login
+--------------------------------------------------------
+- Username
+- Password
+- Login
+
+
+--------------------------------------------------------
+Screen 2: Riders Management
+--------------------------------------------------------
+Purpose:
+Central rider registry.
+
+Actions
+- Add / Edit / Delete Rider
+  - Name
+  - Surname
+  - Team
+  - Bio
+  - Photo
+
+Reusable across all events.
+
+
+--------------------------------------------------------
+Screen 3: Classes Management
+--------------------------------------------------------
+Purpose:
+Define competition classes.
+
+Actions
+- Add / Edit / Delete Class (450, 250, etc.)
+
+Reusable across events.
+
+
+--------------------------------------------------------
+Screen 4: Event Management
+--------------------------------------------------------
+Purpose:
+Bind riders and classes to an event.
+
+Actions
+- Create / Edit Event
+- Assign Classes
+- Assign Riders per Class
+
+
+--------------------------------------------------------
+Screen 5: Heat & Overtake Management
+--------------------------------------------------------
+Purpose:
+Create overtakes live.
+
+Flow
+- Select Event
+- Select Class
+- Select Heat
+
+Overtake Creation
+- Select Overtaker
+- Select Overtaken (must be different)
+- Add description
+- Create Overtake
+
+Notes
+- Overtakes are raw candidates
+- No predefined list
+- Created in real time
+
+
+--------------------------------------------------------
+Screen 6: Match Control (Admin Flow)
+--------------------------------------------------------
+Purpose:
+Control fan match sequencing ONLY.
+
+Admin selects
+- Current HOTSEAT overtake
+- Next CHALLENGER overtake
+
+Actions
+- Release Match → triggers FAN voting
+- Advance next challenger manually
+
+Rules
+- Admin does NOT decide fan winner
+- Admin does NOT intervene in Sudden Death
+- Admin cannot override fan outcomes
+
+
+--------------------------------------------------------
+Screen 7: Admin Voting – Best Overtake
+--------------------------------------------------------
+Purpose:
+Jury decision, fully independent.
+
+Rules
+- One admin vote per match
+- Admin votes do NOT affect fan flow
+- Fan votes do NOT affect admin decision
+
+Controls
+- Vote HOTSEAT
+- Vote CHALLENGER
+
+Output
+- Jury Best Overtake
+
+
+--------------------------------------------------------
+Screen 8: Admin Voting – Best Rider
+--------------------------------------------------------
+Purpose:
+Jury-selected best rider.
+
+Rules
+- One admin vote per class per heat
+- Independent from fan rider vote
+
+Output
+- Jury Best Rider
+
+
+--------------------------------------------------------
+Screen 9: Heat Dashboard (Optional)
+--------------------------------------------------------
+Displays
+- Current fan match
+- Fan vote counts
+- Sudden Death round status
+- Admin vote status (separate)
+- Timers
+- Engagement metrics
+
+
+========================================================
+MONGODB COLLECTIONS
+========================================================
+
+Riders Collection
+-----------------
+{
+  "_id": "rider_id",
+  "name": "John",
+  "surname": "Doe",
+  "team": "Team X",
+  "bio": "Info",
+  "photo": "url"
+}
+
+Classes Collection
+------------------
+{
+  "_id": "class_id",
+  "name": "450"
+}
+
+Events Collection
+-----------------
+{
+  "_id": "event_id",
+  "name": "Dakar Rally",
+  "date": "2026-01-15",
+  "stop": "Round 1",
+  "location": "Saudi Arabia",
+  "classes": [
+    {
+      "class_id": "450",
+      "rider_ids": ["r1", "r2", "r3"]
+    }
+  ]
+}
+
+Overtakes Collection
+--------------------
+{
+  "_id": "overtake_id",
+  "event_id": "event_id",
+  "class_id": "450",
+  "heat": 1,
+  "overtaker_id": "rA",
+  "overtaken_id": "rB",
+  "description": "Pass on turn 3",
+  "status": "available | hotseat | eliminated | winner"
+}
+
+Matches Collection
+------------------
+{
+  "_id": "match_id",
+  "event_id": "event_id",
+  "class_id": "450",
+  "heat": 1,
+  "hotseat_overtake_id": "o1",
+  "challenger_overtake_id": "o2",
+  "sudden_death": {
+    "triggered": true,
+    "round": 1,
+    "resolved": false,
+    "result": "hotseat | challenger | tie"
+  }
+}
+
+Fan Votes Collection
+--------------------
+{
+  "_id": "fan_vote_id",
+  "session_id": "session_1",
+  "match_id": "match_3",
+  "phase": "regular | sudden_death",
+  "selected": "hotseat | challenger",
+  "response_time_ms": 1200,
+  "timestamp": "2026-01-15T12:30:45Z"
+}
+
+Admin Votes Collection
+----------------------
+{
+  "_id": "admin_vote_id",
+  "admin_id": "admin_1",
+  "match_id": "match_3",
+  "selected": "hotseat | challenger",
+  "timestamp": "2026-01-15T12:31:10Z"
+}
+
+Best Rider Votes – Fan
+----------------------
+{
+  "event_id": "event_id",
+  "class_id": "450",
+  "heat": 1,
+  "rider_id": "rider2"
+}
+
+Best Rider Votes – Admin
+------------------------
+{
+  "event_id": "event_id",
+  "class_id": "450",
+  "heat": 1,
+  "rider_id": "rider3",
+  "admin_id": "admin_1"
+}
+
+
+========================================================
+RESULTS OUTPUT
+========================================================
+
+Fan Results
+-----------
+- Fan Best Overtake (Winner or Tie)
+- Fan Best Rider
+
+Admin Results
+-------------
+- Jury Best Overtake
+- Jury Best Rider
+
+Both results are valid.
+Neither overrides the other.
+========================================================
+

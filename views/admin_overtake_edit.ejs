@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Overtake</title>
+</head>
+<body>
+
+<%- include("partials/admin_menu") %>
+
+<h1>Edit Overtake</h1>
+
+<% if (error) { %>
+  <p><strong>Error:</strong> <%= error %></p>
+<% } %>
+
+<% if (success) { %>
+  <p><strong>Success:</strong> <%= success %></p>
+<% } %>
+
+<form action="/admin/overtake/edit/<%= overtake._id %>" method="POST">
+
+  <p>
+    <label for="event_id">Event</label><br>
+    <select id="event_id" name="event_id" required>
+      <% events.forEach(event => { %>
+        <option value="<%= event._id %>" <%= overtake.event_id.toString() === event._id.toString() ? 'selected' : '' %>>
+          <%= event.name %> (<%= event.date ? new Date(event.date).toISOString().split("T")[0] : '' %>)
+        </option>
+      <% }) %>
+    </select>
+  </p>
+
+  <p>
+    <label for="class_id">Class</label><br>
+    <select id="class_id" name="class_id" required>
+      <% classes.forEach(cls => { %>
+        <option value="<%= cls._id %>" <%= overtake.class_id.toString() === cls._id.toString() ? 'selected' : '' %>>
+          <%= cls.name %>
+        </option>
+      <% }) %>
+    </select>
+  </p>
+
+  <p>
+    <label for="heat">Heat</label><br>
+    <input type="number" id="heat" name="heat" min="1" value="<%= overtake.heat %>" required>
+  </p>
+
+  <p>
+    <label for="overtaker_id">Overtaker</label><br>
+    <select id="overtaker_id" name="overtaker_id" required>
+      <% riders.forEach(rider => { %>
+        <option value="<%= rider._id %>" <%= overtake.overtaker_id.toString() === rider._id.toString() ? 'selected' : '' %>>
+          <%= rider.name %> <%= rider.surname %>
+        </option>
+      <% }) %>
+    </select>
+  </p>
+
+  <p>
+    <label for="overtaken_id">Overtaken</label><br>
+    <select id="overtaken_id" name="overtaken_id" required>
+      <% riders.forEach(rider => { %>
+        <option value="<%= rider._id %>" <%= overtake.overtaken_id.toString() === rider._id.toString() ? 'selected' : '' %>>
+          <%= rider.name %> <%= rider.surname %>
+        </option>
+      <% }) %>
+    </select>
+  </p>
+
+  <p>
+    <label for="description">Description</label><br>
+    <input type="text" id="description" name="description" value="<%= overtake.description %>" required>
+  </p>
+
+  <p>
+    <label for="status">Status</label><br>
+    <select id="status" name="status">
+      <option value="available"  <%= overtake.status === 'available'  ? 'selected' : '' %>>Available</option>
+      <option value="hotseat"    <%= overtake.status === 'hotseat'    ? 'selected' : '' %>>Hotseat</option>
+      <option value="eliminated" <%= overtake.status === 'eliminated' ? 'selected' : '' %>>Eliminated</option>
+      <option value="winner"     <%= overtake.status === 'winner'     ? 'selected' : '' %>>Winner</option>
+    </select>
+  </p>
+
+  <button type="submit">Update Overtake</button>
+
+</form>
+
+</body>
+</html>

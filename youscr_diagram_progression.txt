@@ -1,0 +1,34 @@
+SX Brasil | Round 1 | Class 450
+Dynamic Hotseat Head-to-Head
+
+Initial Hotseat:
+----------------------------------
+HOTSEAT: Lucas Moreno overtakes Bruno Silva
+CHALLENGER: Rafael Costa overtakes Felipe Alves
+Fans choose → Winner: Rafael Costa
+----------------------------------
+
+Next Hotseat:
+----------------------------------
+HOTSEAT: Rafael Costa overtakes Felipe Alves
+CHALLENGER: Daniel Freitas overtakes Tiago Rocha
+Fans choose → Winner: Rafael Costa
+----------------------------------
+
+Next Hotseat:
+----------------------------------
+HOTSEAT: Rafael Costa overtakes Felipe Alves
+CHALLENGER: Pedro Carvalho overtakes Henrique Nunes
+Fans choose → Winner: Pedro Carvalho
+----------------------------------
+
+Final Hotseat:
+----------------------------------
+HOTSEAT: Pedro Carvalho overtakes Henrique Nunes
+CHALLENGER: (optional new overtake if admin selects)
+Fans choose → Winner: Pedro Carvalho
+----------------------------------
+
+Final Result:
+HOTSEAT WINNER / Best Overtake: Pedro Carvalho overtakes Henrique Nunes
+

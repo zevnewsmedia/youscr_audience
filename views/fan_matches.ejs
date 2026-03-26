@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Live Fan Matches</title>
+</head>
+<body>
+
+  <div id="waiting">📡 Waiting for a match to be created...</div>
+  <div id="match-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+  const socket = io();
+  const container = document.getElementById('match-container');
+  const waiting = document.getElementById('waiting');
+
+  // We define the function separately to prevent "Listener Stacking"
+  function handleNewMatch(data) {
+    if (!data.hotseat_display || !data.challenger_display) return;
+
+    console.log("Valid Match Received:", data);
+    waiting.style.display = 'none';
+
+    container.innerHTML = `
+      <div id="voting-card">
+        <small>Match ID: ${data.match_id || 'Live'}</small>
+        <h2>Active Voting</h2>
+        
+        <div class="option">
+          <strong>Hotseat:</strong>
+          <p>${data.hotseat_display}</p>
+        </div>
+        <hr>
+        <div class="option">
+          <strong>Challenger:</strong>
+          <p>${data.challenger_display}</p>
+        </div>
+
+        <div id="vote-actions">
+          <button class="vote-btn" onclick="vote(this, '${data.match_id}', '${data.hotseat_overtake_id}')">Vote Hotseat</button>
+          <button class="vote-btn" onclick="vote(this, '${data.match_id}', '${data.challenger_overtake_id}')">Vote Challenger</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Remove any existing listeners before adding the new one
+  socket.off('new_match_notification');
+  socket.on('new_match_notification', handleNewMatch);
+
+  function vote(btn, mId, oId) {
+    // Disable buttons to prevent double-submits
+    document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
+    btn.innerText = "Voting...";
+
+    fetch('/fan/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ match_id: mId, overtake_id: oId })
+    })
+    .then(res => res.ok ? (btn.innerText = "✅ Voted!") : alert("Error"))
+    .catch(err => console.error(err));
+  }
+  </script>
+</body>
+</html>

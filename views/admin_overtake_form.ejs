@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Admin – Overtakes</title>
+</head>
+<body>
+    <%- include("partials/admin_menu") %>
+
+    <h1>Create New Overtake</h1>
+
+    <% if (error) { %>
+        <p><strong>Error:</strong> <%= error %></p>
+    <% } %>
+    <% if (success) { %>
+        <p><strong><%= success %></strong></p>
+    <% } %>
+
+    <form action="/admin/overtake/new" method="POST">
+        <table>
+            <tr>
+                <td>Event:</td>
+                <td>
+                    <select id="event_id" name="event_id" required>
+                        <option value="">-- Select Event --</option>
+                        <% events.forEach(event => { %>
+                            <option value="<%= event._id %>" <%= overtake.event_id == event._id ? 'selected' : '' %>>
+                                <%= event.name %>
+                            </option>
+                        <% }) %>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Class:</td>
+                <td>
+                    <select id="class_id" name="class_id" required>
+                        <option value="">-- Select Class --</option>
+                        <% classes.forEach(cls => { %>
+                            <option value="<%= cls._id %>" <%= overtake.class_id == cls._id ? 'selected' : '' %>>
+                                <%= cls.name %>
+                            </option>
+                        <% }) %>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Heat:</td>
+                <td><input type="number" id="heat" name="heat" min="1" value="<%= overtake.heat || 1 %>" required></td>
+            </tr>
+            <tr>
+                <td>Overtaker:</td>
+                <td>
+                    <select id="overtaker_id" name="overtaker_id" required disabled>
+                        <option value="">-- Select Rider --</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Overtaken:</td>
+                <td>
+                    <select id="overtaken_id" name="overtaken_id" required disabled>
+                        <option value="">-- Select Rider --</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Description:</td>
+                <td><input type="text" id="description" name="description" value="<%= overtake.description || '' %>" required></td>
+            </tr>
+            <tr>
+                <td>Status:</td>
+                <td>
+                    <select id="status" name="status">
+                        <option value="available"  <%= overtake.status === 'available' ? 'selected' : '' %>>Available</option>
+                        <option value="hotseat"    <%= overtake.status === 'hotseat' ? 'selected' : '' %>>Hotseat</option>
+                        <option value="eliminated" <%= overtake.status === 'eliminated' ? 'selected' : '' %>>Eliminated</option>
+                        <option value="winner"     <%= overtake.status === 'winner' ? 'selected' : '' %>>Winner</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td></td>
+                <td><button type="submit">Save Overtake</button></td>
+            </tr>
+        </table>
+    </form>
+
+    <hr>
+
+    <h2 id="table_title">Overtakes History</h2>
+    <div id="overtakes_result">
+        <p>Select an event to view the list.</p>
+    </div>
+
+    <script>
+        const classSelect = document.getElementById('class_id');
+        const eventSelect = document.getElementById('event_id');
+        const resultDiv = document.getElementById('overtakes_result');
+        const tableTitle = document.getElementById('table_title');
+
+        // ── Handle Delete/Restore Actions ──
+        async function handleAction(id, action) {
+            const confirmMsg = action === 'delete' ? 'Soft delete this overtake?' : 'Restore this overtake?';
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const res = await fetch(`/admin/overtake/${id}/${action}`, { method: 'POST' });
+                if (res.ok) {
+                    loadOvertakesTable(); // Refresh table on success
+                } else {
+                    alert(`Failed to ${action} record.`);
+                }
+            } catch (err) {
+                console.error(`${action} error:`, err);
+            }
+        }
+
+        // ── Load Overtakes Table via AJAX ──
+        async function loadOvertakesTable() {
+            const eventId = eventSelect.value;
+            const classId = classSelect.value;
+            if (!eventId) return;
+
+            try {
+                let url = `/admin/overtakes/by-event/${eventId}`;
+                if (classId) url += `?class_id=${classId}`;
+
+                const res = await fetch(url);
+                const overtakes = await res.json();
+
+                if (!overtakes || overtakes.length === 0) {
+                    resultDiv.innerHTML = '<p>No overtakes found for the selection.</p>';
+                    return;
+                }
+
+                const eventName = eventSelect.options[eventSelect.selectedIndex].text;
+                tableTitle.textContent = `Overtakes: ${eventName}`;
+
+                let html = `
+                    <table border="1" cellpadding="6">
+                        <thead>
+                            <tr>
+                                <th>Heat</th>
+                                <th>Class</th>
+                                <th>Overtaker</th>
+                                <th>Overtaken</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Deleted?</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                overtakes.forEach(o => {
+                    const overtakerFull = o.overtaker_first ? `${o.overtaker_first} ${o.overtaker_last || ''}` : "Not Found";
+                    const overtakenFull = o.overtaken_first ? `${o.overtaken_first} ${o.overtaken_last || ''}` : "Not Found";
+                    
+                    // Critical Check: Handles both Boolean and String types from MongoDB
+                    const isDeleted = (o.deleted === true || String(o.deleted) === 'true');
+
+                    html += `
+                        <tr style="${isDeleted ? 'background-color: #ffebee; color: #777;' : ''}">
+                            <td>${o.heat}</td>
+                            <td>${o.class_id}</td>
+                            <td>${overtakerFull}</td>
+                            <td>${overtakenFull}</td>
+                            <td>${o.description}</td>
+                            <td>${o.status}</td>
+                            <td><strong>${isDeleted ? 'YES' : 'NO'}</strong></td>
+                            <td>
+                                ${!isDeleted ? `
+                                    <button onclick="window.location.href='/admin/overtake/edit/${o._id}'">Edit</button>
+                                    <button onclick="handleAction('${o._id}', 'delete')">Delete</button>
+                                ` : `
+                                    <button onclick="handleAction('${o._id}', 'restore')">Restore</button>
+                                `}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                resultDiv.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                resultDiv.innerHTML = '<p>Error loading table.</p>';
+            }
+        }
+
+        // ── Event Listeners ──
+        eventSelect.addEventListener('change', () => {
+            loadOvertakesTable();
+            classSelect.dispatchEvent(new Event('change')); // Reset riders
+        });
+
+        classSelect.addEventListener('change', async function() {
+            const selectedClass = this.value;
+            const selectedEvent = eventSelect.value;
+            loadOvertakesTable();
+
+            ['overtaker_id', 'overtaken_id'].forEach(id => {
+                const el = document.getElementById(id);
+                el.innerHTML = '<option value="">-- Select Rider --</option>';
+                el.disabled = true;
+            });
+
+            if (!selectedClass || !selectedEvent) return;
+
+            try {
+                const res = await fetch(`/api/riders-by-event-class?event_id=${selectedEvent}&class_id=${selectedClass}`);
+                const riders = await res.json();
+                ['overtaker_id', 'overtaken_id'].forEach(id => {
+                    const el = document.getElementById(id);
+                    el.disabled = false;
+                    riders.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r._id;
+                        opt.textContent = `${r.name} ${r.surname}`;
+                        el.appendChild(opt);
+                    });
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    </script>
+</body>
+</html>

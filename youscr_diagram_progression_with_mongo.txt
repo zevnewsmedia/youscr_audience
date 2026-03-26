@@ -1,0 +1,102 @@
+EVENT: SX Brasil | Round 1 | Class 450
+DATE: 2026-02-15
+LOCATION: São Paulo, Brazil
+
+=====================================================
+DYNAMIC HOTSEAT HEAD-TO-HEAD OVERTAKE MATCHES
+=====================================================
+
+MATCH 1
+----------------------------------------------------
+HOTSEAT: Lucas Moreno overtakes Bruno Silva
+Description: Lucas passed Bruno on turn 1
+CHALLENGER (selected by admin in real time): Rafael Costa overtakes Felipe Alves
+Description: Rafael overtakes Felipe on the first straight
+Fans choose: Overtake 2
+Winner: Overtake 2 (Rafael Costa overtakes Felipe Alves)
+
+MATCH 2
+----------------------------------------------------
+HOTSEAT: Rafael Costa overtakes Felipe Alves (winner of Match 1)
+CHALLENGER (selected by admin in real time): Daniel Freitas overtakes Tiago Rocha
+Description: Daniel overtakes Tiago on a jump landing
+Fans choose: Overtake 2
+Winner: Overtake 2 (Rafael Costa overtakes Felipe Alves)
+
+MATCH 3
+----------------------------------------------------
+HOTSEAT: Rafael Costa overtakes Felipe Alves (winner of Match 2)
+CHALLENGER (selected by admin in real time): Pedro Carvalho overtakes Henrique Nunes
+Description: Pedro overtakes Henrique on the final berm
+Fans choose: Overtake 4
+Winner: Overtake 4 (Pedro Carvalho overtakes Henrique Nunes)
+
+MATCH 4 (FINAL HOTSEAT)
+----------------------------------------------------
+HOTSEAT: Pedro Carvalho overtakes Henrique Nunes (winner of Match 3)
+CHALLENGER: Optional new overtake (if admin selects)
+Winner: Overtake 4 (Pedro Carvalho overtakes Henrique Nunes)
+
+=====================================================
+BEST RIDER VOTING
+=====================================================
+Options (450 Class):
+- Rafael Costa  (winner of early hotseat matches)
+- Pedro Carvalho (final hotseat winner)
+- Lucas Moreno (first hotseat challenger, participated in Match 1)
+Fan Votes:
+- Rafael Costa: 95
+- Pedro Carvalho: 135
+- Lucas Moreno: 70
+Winner: Pedro Carvalho
+
+=====================================================
+MONGODB HYPOTHETICAL DATA
+=====================================================
+
+Hotseat Votes Collection (examples)
+{
+  "event_id": "sx_brasil_round1",
+  "heat": 1,
+  "class": 450,
+  "hotseat": "Lucas Moreno overtakes Bruno Silva",
+  "challenger": "Rafael Costa overtakes Felipe Alves",
+  "winner": "Rafael Costa overtakes Felipe Alves",
+  "fan_votes": {"hotseat": 45, "challenger": 55},
+  "timestamp": "2026-02-15T12:30:00Z"
+}
+
+{
+  "event_id": "sx_brasil_round1",
+  "heat": 1,
+  "class": 450,
+  "hotseat": "Rafael Costa overtakes Felipe Alves",
+  "challenger": "Daniel Freitas overtakes Tiago Rocha",
+  "winner": "Rafael Costa overtakes Felipe Alves",
+  "fan_votes": {"hotseat": 60, "challenger": 40},
+  "timestamp": "2026-02-15T12:35:00Z"
+}
+
+{
+  "event_id": "sx_brasil_round1",
+  "heat": 1,
+  "class": 450,
+  "hotseat": "Rafael Costa overtakes Felipe Alves",
+  "challenger": "Pedro Carvalho overtakes Henrique Nunes",
+  "winner": "Pedro Carvalho overtakes Henrique Nunes",
+  "fan_votes": {"hotseat": 45, "challenger": 55},
+  "timestamp": "2026-02-15T12:40:00Z"
+}
+
+Best Rider Votes
+{
+  "event_id": "sx_brasil_round1",
+  "heat": 1,
+  "class": 450,
+  "rider_votes": {
+    "Rafael Costa": 95,
+    "Pedro Carvalho": 135,
+    "Lucas Moreno": 70
+  }
+}
+
