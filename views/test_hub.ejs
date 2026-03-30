@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DEBUG HUB</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f0f0; padding: 20px; }
+        #status { padding: 10px; margin-bottom: 10px; background: #fff; border: 1px solid #ccc; }
+        .box { background: white; padding: 10px; margin-top: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <h1>🚨 Socket Debugger</h1>
+    
+    <div id="status">
+        <p><strong>Step 1:</strong> Socket Connection: <span id="socket-conn">🔴 Offline</span></p>
+        <p><strong>Step 2:</strong> Room Join (<%= event_id %>): <span id="room-status">⏳ Pending...</span></p>
+    </div>
+
+    <div id="output" class="box">
+        <h3>Live Data Output:</h3>
+        <ul id="list-results">
+            <li>Waiting for admin to push data...</li>
+        </ul>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const eventId = "<%= event_id %>";
+
+        // 1. Monitor Connection
+        socket.on('connect', () => {
+            document.getElementById('socket-conn').innerHTML = "🟢 Connected (" + socket.id + ")";
+            
+            // 2. Try to join the room
+            if (eventId && eventId !== "undefined") {
+                console.log("Emitting join_event for:", eventId);
+                socket.emit('join_event', eventId);
+                document.getElementById('room-status').innerHTML = "✅ Sent Join Request for " + eventId;
+            } else {
+                document.getElementById('room-status').innerHTML = "❌ Error: event_id is empty!";
+            }
+        });
+
+        // 3. Listen for the specific 'simple_update'
+        socket.on('simple_update', (data) => {
+            console.log("DATA ARRIVED:", data);
+            const list = document.getElementById('list-results');
+            list.innerHTML = ""; // Clear list
+
+            data.results.forEach((val, i) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>Slot ${i+1}:</strong> ${val || '---'}`;
+                list.appendChild(li);
+            });
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('socket-conn').innerHTML = "🔴 Disconnected";
+        });
+    </script>
+</body>
+</html>

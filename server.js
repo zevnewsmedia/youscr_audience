@@ -4446,10 +4446,151 @@ app.get("/fan/best-trick-vote", async (req, res) => {
 
 
 
+/* =====================================================
+   SIMPLE RESULT BROADCASTER 
+   Purpose: Capture 4 values and push them to fans
+===================================================== */
 
+// 1. Display the Form
+app.get('/admin/results/simple', (req, res) => {
+    const event_id = "12345"; // In a real app, get this from a database or slug
+    res.render('admin_simple_form', { event_id });
+});
+
+
+/* =====================================================
+   1. SOCKET.IO CONNECTION HANDLER (The Fix)
+===================================================== */
+io.on('connection', (socket) => {
+    console.log('🔌 New connection:', socket.id);
+
+    // CRITICAL: This puts the fan into the specific event room
+    socket.on('join_event', (eventId) => {
+        if (eventId) {
+            socket.join(eventId);
+            console.log(`✅ Socket ${socket.id} joined room: ${eventId}`);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('❌ User disconnected');
+    });
+});
+
+/* =====================================================
+   2. THE POST ROUTE (The Broadcaster)
+===================================================== */
+app.post('/admin/results/simple/submit', (req, res) => {
+    const { event_id, v1, v2, v3, v4, v5, v6, v7, v8 } = req.body;
+    const resultsArray = [v1, v2, v3, v4, v5, v6, v7, v8];
+
+    // Debug logs to verify room population
+    const room = io.sockets.adapter.rooms.get(event_id);
+    const numClients = room ? room.size : 0;
+
+    console.log("-----------------------------------------");
+    console.log(`📡 BROADCASTING TO ROOM: ${event_id}`);
+    console.log(`👥 FANS IN ROOM: ${numClients}`);
+    console.log(`📦 DATA:`, resultsArray);
+    console.log("-----------------------------------------");
+
+    // Emit the data
+    io.to(event_id).emit('simple_update', {
+        event_id: event_id,
+        results: resultsArray
+    });
+
+    res.redirect('back');
+});
+
+
+
+/* =====================================================
+   NEW ROUTE: FETCH DB STANDINGS & BROADCAST TO FANS
+   Path: GET /admin/broadcast-best-trick
+===================================================== */
+/* =====================================================
+   SERVER: BULLETPROOF SOCKET HANDLER
+===================================================== */
+io.on('connection', (socket) => {
+    console.log('🔌 Connection:', socket.id);
+
+    socket.on('join_event', (eventId) => {
+        // FORCE EVERYTHING TO STRING
+        const roomName = String(eventId).trim(); 
+        
+        socket.join(roomName);
+        
+        // --- VERIFICATION LOGS ---
+        const room = io.sockets.adapter.rooms.get(roomName);
+        console.log(`✅ SUCCESS: ${socket.id} joined [${roomName}]`);
+        console.log(`👥 Total Fans now in [${roomName}]: ${room ? room.size : 0}`);
+    });
+});
+
+/* =====================================================
+   SERVER: UPDATED BROADCAST ROUTE
+===================================================== */
+app.get('/admin/broadcast-best-trick', async (req, res) => {
+    try {
+        const { event_id, heat } = req.query;
+        const roomName = String(event_id).trim();
+        const heatNum = parseInt(heat) || 0;
+
+        // 1. Get the DB Data
+        const searchIds = [roomName];
+        try { searchIds.push(new ObjectId(roomName)); } catch(e) {}
+
+        const standings = await getDB().collection("best_trick_votes").aggregate([
+            { $match: { event_id: { $in: searchIds }, heat: heatNum } },
+            { $group: { _id: "$voted_trick_id", voteCount: { $sum: 1 } } },
+            { $addFields: { trick_oid: { $toObjectId: "$_id" } } },
+            { $lookup: { from: "event_tricks", localField: "trick_oid", foreignField: "_id", as: "p" } },
+            { $unwind: { path: "$p", preserveNullAndEmptyArrays: false } }, // If this fails, the whole row vanishes
+            { $lookup: { from: "riders", localField: "p.rider_id", foreignField: "_id", as: "r" } },
+            { $lookup: { from: "tricks", localField: "p.trick_id", foreignField: "_id", as: "t" } },
+            { $unwind: "$r" }, 
+            { $unwind: "$t" },
+            { $project: { _id: 0, voteCount: 1, rider: "$r.surname", trick: "$t.trick_name" } },
+            { $sort: { voteCount: -1 } }
+        ]).toArray();
+
+        console.log(`🔎 DB Found ${standings.length} rows for Event ${roomName}`);
+
+        // 2. Format with a "Safety Net"
+        let formattedResults;
+        if (standings.length === 0) {
+            formattedResults = ["No votes found in database for this Heat."];
+        } else {
+            formattedResults = standings.map(item => 
+                `${item.rider || 'Unknown Rider'}: ${item.trick || 'Unknown Trick'} (${item.voteCount || 0} votes)`
+            );
+        }
+
+        // 3. Emit
+        io.to(roomName).emit('simple_update', {
+            event_id: roomName,
+            results: formattedResults
+        });
+
+        res.send(`Broadcast complete. Found ${standings.length} items.`);
+
+    } catch (error) {
+        console.error("Aggregation Error:", error);
+        res.status(500).send("DB Error: " + error.message);
+    }
+});
 // =====================================================
 // TEST & HEALTH ROUTES
 // =====================================================
+
+
+app.get('/test-hub', (req, res) => {
+    // Ensure this matches the ID you use in the broadcast URL
+    const debugID = "69aeb1c6332d8447ca24f222"; 
+    res.render('test_hub', { event_id: debugID });
+});
+
 
 // Basic test route
 app.get("/test", (req, res) => {

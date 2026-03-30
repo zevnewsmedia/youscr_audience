@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Submit</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .input-group { margin-bottom: 15px; }
+        input { padding: 8px; width: 200px; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; }
+    </style>
+</head>
+<body>
+
+    <h2>Event Admin: Quick Broadcast</h2>
+    
+    <form action="/admin/results/simple/submit" method="POST">
+        <input type="hidden" name="event_id" value="<%= event_id %>">
+
+        <div class="input-group">
+            <input type="text" name="field1" placeholder="Input Box 1" required>
+        </div>
+
+        <div class="input-group">
+            <input type="text" name="field2" placeholder="Input Box 2" required>
+        </div>
+
+        <div class="input-group">
+            <input type="text" name="field3" placeholder="Input Box 3" required>
+        </div>
+
+        <div class="input-group">
+            <input type="text" name="field4" placeholder="Input Box 4" required>
+        </div>
+
+        <button type="submit">Push to Fan Hub</button>
+    </form>
+
+</body>
+</html>

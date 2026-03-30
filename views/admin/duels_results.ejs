@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Live Duels Results</title>
-    
     <script src="/socket.io/socket.io.js"></script>
-
 </head>
 <body>
-     <%- include("../partials/admin_menu") %>
+    <%- include("../partials/admin_menu") %>
 
     <div id="sync-overlay" style="display:none;">
         <h2>🔄 Updating Live Data...</h2>
@@ -23,6 +21,7 @@
         <% } %>
     </div>
 
+    <!-- FORM 1: Filter -->
     <form method="GET" action="/admin/results/duels">
         <select name="event_id">
             <option value="">-- Select Event --</option>
@@ -41,6 +40,7 @@
 
         <button type="submit">Load</button>
     </form>
+    <!-- END FORM 1 -->
 
     <hr>
 
@@ -49,84 +49,93 @@
     <% } else if (duels.length === 0) { %>
         <p>No matches found for this event and heat.</p>
     <% } else { %>
+
         <p><strong><%= duels.length %></strong> duel(s) found.</p>
 
+        <!-- Duels display — read-only tables, no form wrapper -->
+        <% duels.forEach((duel, index) => { %>
+            <div>
+                <p><strong>Duel #<%= index + 1 %></strong> — <%= new Date(duel.created_at).toLocaleString() %> <%= duel.is_active ? '(Active)' : '' %></p>
+
+                <table border="1" cellpadding="6">
+                    <thead>
+                        <tr>
+                            <th>Side</th>
+                            <th>Rider</th>
+                            <th>Trick</th>
+                            <th>Votes</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>A</td>
+                            <% if (duel.trick_a) { %>
+                                <td><%= duel.trick_a.rider %></td>
+                                <td><%= duel.trick_a.trick %></td>
+                                <td><%= duel.trick_a.voteCount %></td>
+                            <% } else { %>
+                                <td colspan="3">No votes yet</td>
+                            <% } %>
+                            <td>
+                                <% const aWins = duel.winner && duel.trick_a && duel.winner.rider === duel.trick_a.rider %>
+                                <%= aWins ? 'WIN' : '' %>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>B</td>
+                            <% if (duel.trick_b) { %>
+                                <td><%= duel.trick_b.rider %></td>
+                                <td><%= duel.trick_b.trick %></td>
+                                <td><%= duel.trick_b.voteCount %></td>
+                            <% } else { %>
+                                <td colspan="3">No votes yet</td>
+                            <% } %>
+                            <td>
+                                <% const bWins = duel.winner && duel.trick_b && duel.winner.rider === duel.trick_b.rider %>
+                                <%= bWins ? 'WIN' : '' %>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <hr>
+        <% }) %>
+
+        <!-- FORM 2: Push — completely separate, outside the display loop -->
         <form action="/admin/results/duels/submit" method="POST">
             <input type="hidden" name="event_id" value="<%= event_id %>">
             <input type="hidden" name="heat" value="<%= current_heat %>">
-            <button type="submit">🔄 Push Results to All Screens</button>
 
             <% duels.forEach((duel, index) => { %>
-                <div>
-                    <p><strong>Duel #<%= index + 1 %></strong> — <%= new Date(duel.created_at).toLocaleString() %> <%= duel.is_active ? '(Active)' : '' %></p>
+                <input type="hidden" name="duels[<%= index %>][duel_id]" value="<%= duel.match_id %>">
 
-                    <input type="hidden" name="duels[<%= index %>][duel_id]" value="<%= duel._id %>">
+                <% if (duel.trick_a) { %>
+                    <input type="hidden" name="duels[<%= index %>][a][rider]" value="<%= duel.trick_a.rider %>">
+                    <input type="hidden" name="duels[<%= index %>][a][trick]" value="<%= duel.trick_a.trick %>">
+                    <input type="hidden" name="duels[<%= index %>][a][votes]" value="<%= duel.trick_a.voteCount %>">
+                <% } else { %>
+                    <input type="hidden" name="duels[<%= index %>][a][rider]" value="No votes">
+                    <input type="hidden" name="duels[<%= index %>][a][trick]" value="">
+                    <input type="hidden" name="duels[<%= index %>][a][votes]" value="0">
+                <% } %>
+                <input type="hidden" name="duels[<%= index %>][a][result]" value="<%= (duel.winner && duel.trick_a && duel.winner.rider === duel.trick_a.rider) ? 'WIN' : '' %>">
 
-                    <table border="1" cellpadding="6">
-                        <thead>
-                            <tr>
-                                <th>Side</th>
-                                <th>Rider</th>
-                                <th>Trick</th>
-                                <th>Votes</th>
-                                <th>Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>A</td>
-                                <% if (duel.trick_a) { %>
-                                    <td>
-                                        <%= duel.trick_a.rider %>
-                                        <input type="hidden" name="duels[<%= index %>][a][rider]" value="<%= duel.trick_a.rider %>">
-                                    </td>
-                                    <td>
-                                        <%= duel.trick_a.trick %>
-                                        <input type="hidden" name="duels[<%= index %>][a][trick]" value="<%= duel.trick_a.trick %>">
-                                    </td>
-                                    <td>
-                                        <%= duel.trick_a.voteCount %>
-                                        <input type="hidden" name="duels[<%= index %>][a][votes]" value="<%= duel.trick_a.voteCount %>">
-                                    </td>
-                                <% } else { %>
-                                    <td colspan="3">No votes yet</td>
-                                <% } %>
-                                <td>
-                                    <% const aWins = duel.winner && duel.trick_a && duel.winner.rider === duel.trick_a.rider %>
-                                    <%= aWins ? 'WIN' : '' %>
-                                    <input type="hidden" name="duels[<%= index %>][a][result]" value="<%= aWins ? 'WIN' : '' %>">
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>B</td>
-                                <% if (duel.trick_b) { %>
-                                    <td>
-                                        <%= duel.trick_b.rider %>
-                                        <input type="hidden" name="duels[<%= index %>][b][rider]" value="<%= duel.trick_b.rider %>">
-                                    </td>
-                                    <td>
-                                        <%= duel.trick_b.trick %>
-                                        <input type="hidden" name="duels[<%= index %>][b][trick]" value="<%= duel.trick_b.trick %>">
-                                    </td>
-                                    <td>
-                                        <%= duel.trick_b.voteCount %>
-                                        <input type="hidden" name="duels[<%= index %>][b][votes]" value="<%= duel.trick_b.voteCount %>">
-                                    </td>
-                                <% } else { %>
-                                    <td colspan="3">No votes yet</td>
-                                <% } %>
-                                <td>
-                                    <% const bWins = duel.winner && duel.trick_b && duel.winner.rider === duel.trick_b.rider %>
-                                    <%= bWins ? 'WIN' : '' %>
-                                    <input type="hidden" name="duels[<%= index %>][b][result]" value="<%= bWins ? 'WIN' : '' %>">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <hr>
+                <% if (duel.trick_b) { %>
+                    <input type="hidden" name="duels[<%= index %>][b][rider]" value="<%= duel.trick_b.rider %>">
+                    <input type="hidden" name="duels[<%= index %>][b][trick]" value="<%= duel.trick_b.trick %>">
+                    <input type="hidden" name="duels[<%= index %>][b][votes]" value="<%= duel.trick_b.voteCount %>">
+                <% } else { %>
+                    <input type="hidden" name="duels[<%= index %>][b][rider]" value="No votes">
+                    <input type="hidden" name="duels[<%= index %>][b][trick]" value="">
+                    <input type="hidden" name="duels[<%= index %>][b][votes]" value="0">
+                <% } %>
+                <input type="hidden" name="duels[<%= index %>][b][result]" value="<%= (duel.winner && duel.trick_b && duel.winner.rider === duel.trick_b.rider) ? 'WIN' : '' %>">
             <% }) %>
+
+            <button type="submit">🔄 Push Results to All Screens</button>
         </form>
+        <!-- END FORM 2 -->
 
     <% } %>
 
@@ -144,7 +153,7 @@
                 document.getElementById('sync-overlay').style.display = 'block';
                 setTimeout(() => {
                     window.location.reload();
-                }, 300); 
+                }, 300);
             }
         });
     </script>

@@ -29,9 +29,12 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    const socket = io();
-    const container = document.getElementById('main-container');
-    const waiting = document.getElementById('waiting');
+const socket = io();
+socket.onAny((event, ...args) => {
+    console.log('📡 Socket event received:', event, args);
+});
+const container = document.getElementById('main-container');
+const waiting = document.getElementById('waiting');
 
     // Essential: Join the room for this specific event
     const eventId = "<%= session.event_id %>";
@@ -228,6 +231,22 @@ socket.on('match_winner_announced', (data) => {
     container.innerHTML = "<h3>Match Concluded!</h3>";
 });
 
+
+/* =====================================================
+   5d. DUEL RESULTS
+===================================================== */
+/* =====================================================
+   5d. DUEL RESULTS
+===================================================== */
+socket.on('duel_results', (data) => {
+    clearUI();
+    container.innerHTML = `
+        <div>
+            <h2>Value transmitted just to check how it works</h2>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+        </div>
+    `;
+});
     /* =====================================================
        6. POST SUBMISSION LOGIC
     ===================================================== */
@@ -303,6 +322,10 @@ socket.on('match_winner_announced', (data) => {
         banner.style.display = 'block';
         container.innerHTML = "<h3>Event Completed!</h3>";
     });
+
+
+
+    
 </script>
 </body>
 </html>
