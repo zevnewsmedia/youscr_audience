@@ -4580,6 +4580,93 @@ app.get('/admin/broadcast-best-trick', async (req, res) => {
         res.status(500).send("DB Error: " + error.message);
     }
 });
+
+/* ==========================================================================
+   ROUTE: BROADCAST DUEL WINNERS
+   URL: /admin/broadcast-duel-winners?event_id=69aeb1c6332d8447ca24f222&heat=1
+   ========================================================================== */
+/* ==========================================================================
+   ROUTE: BROADCAST DUEL WINNERS (Match-ID Specific)
+   ========================================================================== */
+app.get('/admin/broadcast-duel-winners', async (req, res) => {
+    try {
+        const { event_id, heat } = req.query;
+        if (!event_id || !heat) return res.status(400).send("Missing event_id or heat");
+
+        const db = getDB();
+        const roomName = String(event_id).trim();
+        const heatNum = parseInt(heat);
+
+        // 1. Get the official matches for this heat, sorted by time
+        const matches = await db.collection("best_trick_matches")
+            .find({ event_id: new ObjectId(roomName), heat: heatNum })
+            .sort({ created_at: 1 })
+            .toArray();
+
+        if (matches.length === 0) return res.send("No matches found.");
+
+        console.log(`\n--- 🏁 STARTING MATCH-SPECIFIC BROADCAST (Heat ${heatNum}) ---`);
+
+        // 2. Map through each match and count votes ONLY for that match_id
+        const results = await Promise.all(matches.map(async (match, index) => {
+            
+            // Count votes for Trick A IN THIS MATCH
+            const votesA = await db.collection("best_trick_votes").countDocuments({ 
+                match_id: match._id, 
+                voted_trick_id: { $in: [String(match.trick_a_id), match.trick_a_id] } 
+            });
+
+            // Count votes for Trick B IN THIS MATCH
+            const votesB = await db.collection("best_trick_votes").countDocuments({ 
+                match_id: match._id, 
+                voted_trick_id: { $in: [String(match.trick_b_id), match.trick_b_id] } 
+            });
+
+            // Winner Logic (Mirroring your Dashboard: null/tie check)
+            let winnerName = "Tied/No Votes";
+            let winningVotes = 0;
+
+            // Fetch names for the console log
+            const trickA = await db.collection("event_tricks").findOne({ _id: match.trick_a_id });
+            const trickB = await db.collection("event_tricks").findOne({ _id: match.trick_b_id });
+            const rA = await db.collection("riders").findOne({ _id: trickA?.rider_id });
+            const rB = await db.collection("riders").findOne({ _id: trickB?.rider_id });
+            
+            const nameA = rA ? rA.surname : "Rider A";
+            const nameB = rB ? rB.surname : "Rider B";
+
+            if (votesA > votesB) {
+                winnerName = `🏆 ${nameA}`;
+                winningVotes = votesA;
+            } else if (votesB > votesA) {
+                winnerName = `🏆 ${nameB}`;
+                winningVotes = votesB;
+            }
+
+            // 🟢 CONSOLE LOG: Now isolated by match_id
+            console.log(`Duel #${index + 1} [ID: ${match._id}]: (${nameA}: ${votesA}) vs (${nameB}: ${votesB}) -> Winner: ${winnerName}`);
+
+            return `Duel ${index + 1}: ${winnerName} (${winningVotes} votes)`;
+        }));
+
+        console.log("-----------------------------------\n");
+
+        // 3. Broadcast
+        io.to(roomName).emit('simple_update', {
+            event_id: roomName,
+            results: results
+        });
+
+        res.send(`Broadcasted ${results.length} matches correctly.`);
+
+    } catch (error) {
+        console.error("❌ Match Broadcast Error:", error);
+        res.status(500).send(error.message);
+    }
+});
+/* ======================== END BROADCAST ROUTE ============================ */
+
+
 // =====================================================
 // TEST & HEALTH ROUTES
 // =====================================================
