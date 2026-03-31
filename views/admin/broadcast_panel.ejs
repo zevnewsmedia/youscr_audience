@@ -1,0 +1,58 @@
+<body style="font-family: sans-serif; padding: 20px;">
+
+    <h1>Broadcast Control Center</h1>
+
+    <div style="background: #eee; padding: 15px; border-radius: 8px;">
+        <form action="/admin/broadcast-duel-winners" method="GET">
+            <label>Event:</label>
+            <select name="event_id" onchange="this.form.submit()">
+                <option value="">-- Select Event --</option>
+                <% events.forEach(e => { %>
+                    <option value="<%= e._id %>" <%= event_id == e._id.toString() ? 'selected' : '' %>>
+                        <%= e.name %>
+                    </option>
+                <% }) %>
+            </select>
+
+            <label>Heat:</label>
+            <select name="heat" onchange="this.form.submit()">
+                <% [1,2,3,4,5].forEach(h => { %>
+                    <option value="<%= h %>" <%= current_heat == h ? 'selected' : '' %>>Heat <%= h %></option>
+                <% }) %>
+            </select>
+            
+            <noscript><button type="submit">Filter</button></noscript>
+        </form>
+    </div>
+
+    <% if (matchResults.length > 0) { %>
+        <div style="margin-top: 20px;">
+            <h3>Current Standings (Preview)</h3>
+            <% matchResults.forEach(m => { %>
+                <div style="border-bottom: 1px solid #ccc; padding: 10px;">
+                    <strong><%= m.label %></strong><br>
+                    <span style="color: blue;"><%= m.display %></span>
+                </div>
+            <% }) %>
+
+            <div style="margin-top: 30px; text-align: center;">
+                <form action="/admin/broadcast-duel-winners" method="GET">
+                    <input type="hidden" name="event_id" value="<%= event_id %>">
+                    <input type="hidden" name="heat" value="<%= current_heat %>">
+                    <input type="hidden" name="broadcast" value="true">
+                    
+                    <button type="submit" style="padding: 15px 40px; background: red; color: white; border: none; font-size: 1.2rem; cursor: pointer; border-radius: 5px;">
+                        📢 SEND TO PUBLIC SCREEN
+                    </button>
+                </form>
+                
+                <% if (typeof broadcastSent !== 'undefined' && broadcastSent) { %>
+                    <p style="color: green; font-weight: bold;">✅ Results successfully broadcasted!</p>
+                <% } %>
+            </div>
+        </div>
+    <% } else if (event_id) { %>
+        <p>No matches found for this selection.</p>
+    <% } %>
+
+</body>
