@@ -4588,20 +4588,27 @@ app.get('/admin/broadcast-best-trick', async (req, res) => {
 /* ==========================================================================
    ROUTE: BROADCAST DUEL WINNERS (Match-ID Specific)
    ========================================================================== */
+
+/**
+ * ============================================================================
+ * ROUTE: GET /admin/broadcast-duel-winners
+ * DESCRIPTION: Fetches duel match results for a specific event/heat, 
+ * calculates winners based on votes, and triggers a real-time
+ * Socket.io broadcast to the public display screen.
+ * ============================================================================
+ */
 app.get('/admin/broadcast-duel-winners', async (req, res) => {
     try {
         const db = getDB();
-        const { event_id, heat, broadcast } = req.query; // 'broadcast' is a flag
+        const { event_id, heat, broadcast } = req.query;
         const current_heat = parseInt(heat) || 1;
 
-        // 1. Always load menus
         const events = await db.collection("events").find().toArray();
         
         let matchResults = [];
         let roomName = event_id ? String(event_id).trim() : null;
 
         if (event_id) {
-            // 2. Optimized Fetch: Get all matches, riders, and tricks at once
             const matches = await db.collection("best_trick_matches")
                 .find({ event_id: new ObjectId(roomName), heat: current_heat })
                 .sort({ created_at: 1 }).toArray();
@@ -4611,7 +4618,14 @@ app.get('/admin/broadcast-duel-winners', async (req, res) => {
                 db.collection("event_tricks").find({ event_id: new ObjectId(roomName) }).toArray()
             ]);
 
-            // 3. Map through matches to calculate scores
+            // FIXED: changed rider.first_name to rider.name
+            const getRiderFullName = (trickOid) => {
+                const eTrick = allTricks.find(t => t._id.toString() === trickOid.toString());
+                const rider = allRiders.find(r => r._id.toString() === eTrick?.rider_id?.toString());
+                if (!rider) return "Unknown Rider";
+                return `${rider.name} ${rider.surname}`;
+            };
+
             matchResults = await Promise.all(matches.map(async (match, index) => {
                 const [votesA, votesB] = await Promise.all([
                     db.collection("best_trick_votes").countDocuments({ 
@@ -4624,14 +4638,8 @@ app.get('/admin/broadcast-duel-winners', async (req, res) => {
                     })
                 ]);
 
-                const getRiderSurname = (trickOid) => {
-                    const eTrick = allTricks.find(t => t._id.toString() === trickOid.toString());
-                    const rider = allRiders.find(r => r._id.toString() === eTrick?.rider_id?.toString());
-                    return rider ? rider.surname : "Rider";
-                };
-
-                const nameA = getRiderSurname(match.trick_a_id);
-                const nameB = getRiderSurname(match.trick_b_id);
+                const nameA = getRiderFullName(match.trick_a_id);
+                const nameB = getRiderFullName(match.trick_b_id);
                 
                 let winner = "Tied";
                 if (votesA > votesB) winner = `🏆 ${nameA}`;
@@ -4644,18 +4652,23 @@ app.get('/admin/broadcast-duel-winners', async (req, res) => {
                 };
             }));
 
-            // 4. TRIGGER BROADCAST ONLY IF THE BUTTON WAS PRESSED
             if (broadcast === "true" && matchResults.length > 0) {
                 const broadcastData = matchResults.map(m => m.display);
+
+                console.log(`\n--- 📢 BROADCAST START: Heat ${current_heat} ---`);
+                console.log(`Room ID: ${roomName}`);
+                console.table(matchResults.map(m => m.raw));
+                console.log("Sent to Screen:", broadcastData);
+
                 io.to(roomName).emit('simple_update', {
                     event_id: roomName,
                     results: broadcastData
                 });
-                console.log(`📢 Broadcasted Heat ${current_heat} to room ${roomName}`);
+
+                console.log(`✅ Broadcast successfully emitted to room ${roomName}\n`);
             }
         }
 
-        // 5. Render the UI
         res.render("admin/broadcast_panel", {
             events,
             event_id,
@@ -4669,6 +4682,11 @@ app.get('/admin/broadcast-duel-winners', async (req, res) => {
         res.status(500).send("Error: " + error.message);
     }
 });
+/**
+ * ============================================================================
+ * END OF ROUTE
+ * ============================================================================
+ */
 /* ======================== END BROADCAST ROUTE ============================ */
 
 
