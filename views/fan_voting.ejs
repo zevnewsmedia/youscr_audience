@@ -323,32 +323,29 @@ socket.on('duel_results', (data) => {
         container.innerHTML = "<h3>Event Completed!</h3>";
     });
 
-
-    /* --- DEBUG ADDITIONS --- */
+/* --- DEBUG ADDITIONS --- */
 const connLabel = document.getElementById('socket-conn');
 const roomLabel = document.getElementById('room-status');
-
-// This listens for the connection without changing your existing 'socket' variable
 socket.on('connect', () => {
     connLabel.innerHTML = "🟢 Online (" + socket.id.substring(0,5) + ")";
     roomLabel.innerHTML = "✅ Event: " + eventId;
 });
-
 socket.on('disconnect', () => {
     connLabel.innerHTML = "🔴 Offline";
 });
-
-// The new data listener
 socket.on('simple_update', (data) => {
     console.log("Debug data received:", data);
-    clearUI(); // Uses your existing function to clear the screen
-    
-    let items = data.results.map((val, i) => `<li>Slot ${i+1}: ${val || 'empty'}</li>`).join('');
-    container.innerHTML = `<div style="padding:20px;"><h3>Debug Results:</h3><ul>${items}</ul></div>`;
+    clearUI();
+    let items = data.raw.map((duel, i) => `
+        <li>
+            <strong>Duel ${i+1}:</strong> ${duel.nameA} vs ${duel.nameB}<br>
+            ${duel.winner} (${Math.max(duel.votesA, duel.votesB)} votes)
+        </li>
+    `).join('');
+    container.innerHTML = `<div style="padding:20px;"><h3>Duel Results:</h3><ul>${items}</ul></div>`;
 });
 /* --- END DEBUG ADDITIONS --- */
 
-    
 </script>
 </body>
 </html>

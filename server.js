@@ -4618,7 +4618,6 @@ app.get('/admin/broadcast-duel-winners', async (req, res) => {
                 db.collection("event_tricks").find({ event_id: new ObjectId(roomName) }).toArray()
             ]);
 
-            // FIXED: changed rider.first_name to rider.name
             const getRiderFullName = (trickOid) => {
                 const eTrick = allTricks.find(t => t._id.toString() === trickOid.toString());
                 const rider = allRiders.find(r => r._id.toString() === eTrick?.rider_id?.toString());
@@ -4662,7 +4661,8 @@ app.get('/admin/broadcast-duel-winners', async (req, res) => {
 
                 io.to(roomName).emit('simple_update', {
                     event_id: roomName,
-                    results: broadcastData
+                    results: broadcastData,
+                    raw: matchResults.map(m => m.raw)
                 });
 
                 console.log(`✅ Broadcast successfully emitted to room ${roomName}\n`);
